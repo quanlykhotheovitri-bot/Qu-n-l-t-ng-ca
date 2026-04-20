@@ -1,0 +1,6 @@
+{
+  "name": "Hệ thống Quản lý Tăng ca (OT Tracker)",
+  "description": "Ứng dụng theo dõi và quản lý giờ tăng ca, cảnh báo vượt ngưỡng quy định (12h/tuần, 40h/tháng, 300h/năm).",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

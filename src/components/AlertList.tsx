@@ -1,16 +1,16 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, User, Activity } from 'lucide-react';
 import { OTRecord, Employee, LIMITS } from '../types';
-import { MOCK_EMPLOYEES } from '../constants';
 import { cn } from '../lib/utils';
 import { startOfWeek, startOfMonth, startOfYear, isWithinInterval, parseISO } from 'date-fns';
 
 interface AlertListProps {
   records: OTRecord[];
+  employees: Employee[];
 }
 
 interface AlertEntry {
-  employee: Employee;
+  employee: Partial<Employee>;
   weekHours: number;
   monthHours: number;
   yearHours: number;
@@ -22,7 +22,7 @@ interface AlertEntry {
   isYearExceeded: boolean;
 }
 
-export default function AlertList({ records }: AlertListProps) {
+export default function AlertList({ records, employees }: AlertListProps) {
   const alerts = useMemo(() => {
     const list: AlertEntry[] = [];
     const now = new Date();
@@ -30,9 +30,29 @@ export default function AlertList({ records }: AlertListProps) {
     const monthStart = startOfMonth(now);
     const yearStart = startOfYear(now);
 
-    MOCK_EMPLOYEES.forEach(emp => {
-      const empRecords = records.filter(r => r.employeeId === emp.id);
+    // Get all unique employee IDs from both active list and historical records
+    const allEmployeeIds = new Set([
+      ...employees.map(e => e.id),
+      ...records.map(r => r.employeeId)
+    ]);
+
+    allEmployeeIds.forEach(empId => {
+      const empRecords = records.filter(r => r.employeeId === empId);
       
+      // Try to get employee info from active list, fallback to latest record snapshot
+      const activeEmp = employees.find(e => e.id === empId);
+      const latestRecord = empRecords.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())[0];
+      
+      const empInfo: Partial<Employee> = activeEmp || {
+        id: empId,
+        name: latestRecord?.employeeName,
+        employeeCode: latestRecord?.employeeCode,
+        department: latestRecord?.department,
+        jobTitle: latestRecord?.jobTitle
+      };
+
+      if (empRecords.length === 0) return; // Skip if no history for this ID
+
       const weekHours = empRecords
         .filter(r => isWithinInterval(parseISO(r.date), { start: weekStart, end: now }))
         .reduce((sum, r) => sum + r.hours, 0);
@@ -55,7 +75,7 @@ export default function AlertList({ records }: AlertListProps) {
 
       if (isWeekWarning || isMonthWarning || isYearWarning || isWeekExceeded || isMonthExceeded || isYearExceeded) {
         list.push({
-          employee: emp,
+          employee: empInfo,
           weekHours,
           monthHours,
           yearHours,

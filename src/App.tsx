@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Clock, List, AlertTriangle, Menu, X, ChevronRight } from 'lucide-react';
-import { OTRecord } from './types';
+import { OTRecord, Employee } from './types';
 import Registration from './components/Registration';
 import OTList from './components/OTList';
 import AlertList from './components/AlertList';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { MOCK_EMPLOYEES } from './constants';
 
 type Tab = 'registration' | 'list' | 'alerts';
+
+const generateId = () => {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('registration');
@@ -15,19 +24,35 @@ export default function App() {
     const saved = localStorage.getItem('ot_records');
     return saved ? JSON.parse(saved) : [];
   });
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    const saved = localStorage.getItem('ot_employees');
+    return saved ? JSON.parse(saved) : MOCK_EMPLOYEES;
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     localStorage.setItem('ot_records', JSON.stringify(records));
   }, [records]);
 
+  useEffect(() => {
+    localStorage.setItem('ot_employees', JSON.stringify(employees));
+  }, [employees]);
+
   const addRecord = (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
     const record: OTRecord = {
       ...newRecord,
-      id: crypto.randomUUID(),
+      id: generateId(),
       createdAt: new Date().toISOString(),
     };
     setRecords(prev => [record, ...prev]);
+  };
+
+  const updateRecord = (id: string, updatedFields: Partial<OTRecord>) => {
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
+  };
+
+  const deleteRecord = (id: string) => {
+    setRecords(prev => prev.filter(r => r.id !== id));
   };
 
   const navItems = [
@@ -128,9 +153,25 @@ export default function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'registration' && <Registration onAddRecord={addRecord} records={records} />}
-              {activeTab === 'list' && <OTList records={records} />}
-              {activeTab === 'alerts' && <AlertList records={records} />}
+              {activeTab === 'registration' && (
+                <Registration 
+                  onAddRecord={addRecord} 
+                  records={records} 
+                  employees={employees}
+                  setEmployees={setEmployees}
+                />
+              )}
+              {activeTab === 'list' && (
+                <OTList 
+                  records={records} 
+                  employees={employees} 
+                  onUpdateRecord={updateRecord}
+                  onDeleteRecord={deleteRecord}
+                />
+              )}
+              {activeTab === 'alerts' && (
+                <AlertList records={records} employees={employees} />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>

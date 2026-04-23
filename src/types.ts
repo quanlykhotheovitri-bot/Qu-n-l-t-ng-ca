@@ -3,12 +3,19 @@ export interface Employee {
   employeeCode: string;
   name: string;
   department: string;
+  jobTitle?: string;
 }
 
 export interface OTRecord {
   id: string;
   employeeId: string;
+  employeeName?: string;
+  employeeCode?: string;
+  department?: string;
+  jobTitle?: string;
   date: string; // ISO string YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   hours: number;
   reason: string;
   createdAt: string;

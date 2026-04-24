@@ -44,30 +44,55 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
     );
   }, [searchTerm, employees]);
 
-  const stats = useMemo(() => {
-    if (!selectedEmployee) return null;
-    
-    const empRecords = records.filter(r => r.employeeId === selectedEmployee.id);
+  const employeeStats = useMemo(() => {
     const now = new Date();
-    
+    // Monday as start of week
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
     const monthStart = startOfMonth(now);
     const yearStart = startOfYear(now);
 
-    const weekHours = empRecords
-      .filter(r => isWithinInterval(parseISO(r.date), { start: weekStart, end: now }))
-      .reduce((sum, r) => sum + r.hours, 0);
+    const statsMap: Record<string, { week: number; month: number; year: number }> = {};
+    
+    // Initialize
+    employees.forEach(emp => {
+      statsMap[emp.id] = { week: 0, month: 0, year: 0 };
+    });
 
-    const monthHours = empRecords
-      .filter(r => isWithinInterval(parseISO(r.date), { start: monthStart, end: now }))
-      .reduce((sum, r) => sum + r.hours, 0);
+    // One-pass accumulation over records
+    records.forEach(r => {
+      if (!statsMap[r.employeeId]) return;
+      
+      try {
+        const recordDate = parseISO(r.date);
+        
+        // Check week (isWithinInterval is inclusive of start/end)
+        if (recordDate >= weekStart) {
+          statsMap[r.employeeId].week += r.hours;
+        }
+        // Check month
+        if (recordDate >= monthStart) {
+          statsMap[r.employeeId].month += r.hours;
+        }
+        // Check year
+        if (recordDate >= yearStart) {
+          statsMap[r.employeeId].year += r.hours;
+        }
+      } catch (e) {
+        console.error("Invalid date in record", r);
+      }
+    });
 
-    const yearHours = empRecords
-      .filter(r => isWithinInterval(parseISO(r.date), { start: yearStart, end: now }))
-      .reduce((sum, r) => sum + r.hours, 0);
+    return statsMap;
+  }, [employees, records]);
 
-    return { weekHours, monthHours, yearHours };
-  }, [selectedEmployee, records]);
+  const stats = useMemo(() => {
+    if (!selectedEmployee) return null;
+    return {
+      weekHours: employeeStats[selectedEmployee.id]?.week || 0,
+      monthHours: employeeStats[selectedEmployee.id]?.month || 0,
+      yearHours: employeeStats[selectedEmployee.id]?.year || 0
+    };
+  }, [selectedEmployee, employeeStats]);
 
   const calculateHours = (start: string, end: string) => {
     try {
@@ -452,6 +477,18 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                       <div className="text-[10px] font-bold text-slate-900">Chức vụ</div>
                       <div className="text-[10px] text-[#00B0F0]">Job Title</div>
                     </th>
+                    <th className="px-3 py-3 border-b border-slate-200 text-center">
+                      <div className="text-[10px] font-bold text-slate-900">OT/Tuần</div>
+                      <div className="text-[10px] text-indigo-500">Week</div>
+                    </th>
+                    <th className="px-3 py-3 border-b border-slate-200 text-center">
+                      <div className="text-[10px] font-bold text-slate-900">OT/Tháng</div>
+                      <div className="text-[10px] text-indigo-500">Month</div>
+                    </th>
+                    <th className="px-3 py-3 border-b border-slate-200 text-center">
+                      <div className="text-[10px] font-bold text-slate-900">OT/Năm</div>
+                      <div className="text-[10px] text-indigo-500">Year</div>
+                    </th>
                     <th className="px-4 py-3 border-b border-slate-200 w-24"></th>
                   </tr>
                 </thead>
@@ -463,6 +500,36 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                       <td className="px-6 py-3 font-semibold text-slate-700">{emp.name}</td>
                       <td className="px-6 py-3 text-slate-500">{emp.department}</td>
                       <td className="px-6 py-3 text-slate-500">{emp.jobTitle}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={cn(
+                          "text-xs font-bold px-2 py-0.5 rounded-full",
+                          (employeeStats[emp.id]?.week || 0) >= LIMITS.week ? "bg-red-100 text-red-600" : 
+                          (employeeStats[emp.id]?.week || 0) >= LIMITS.week * 0.8 ? "bg-orange-100 text-orange-600" : 
+                          "bg-slate-100 text-slate-700"
+                        )}>
+                          {employeeStats[emp.id]?.week || 0}h
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={cn(
+                          "text-xs font-bold px-2 py-0.5 rounded-full",
+                          (employeeStats[emp.id]?.month || 0) >= LIMITS.month ? "bg-red-100 text-red-600" : 
+                          (employeeStats[emp.id]?.month || 0) >= LIMITS.month * 0.8 ? "bg-orange-100 text-orange-600" : 
+                          "bg-slate-100 text-slate-700"
+                        )}>
+                          {employeeStats[emp.id]?.month || 0}h
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={cn(
+                          "text-xs font-bold px-2 py-0.5 rounded-full",
+                          (employeeStats[emp.id]?.year || 0) >= LIMITS.year ? "bg-red-100 text-red-600" : 
+                          (employeeStats[emp.id]?.year || 0) >= LIMITS.year * 0.8 ? "bg-orange-100 text-orange-600" : 
+                          "bg-slate-100 text-slate-700"
+                        )}>
+                          {employeeStats[emp.id]?.year || 0}h
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {deletingId === emp.id ? (
@@ -508,7 +575,7 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                   ))}
                   {employees.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-10 text-center text-slate-400 italic text-xs">
+                      <td colSpan={9} className="px-6 py-10 text-center text-slate-400 italic text-xs">
                         Chưa có dữ liệu nhân viên. Vui lòng thêm mới hoặc nhập từ Excel.
                       </td>
                     </tr>

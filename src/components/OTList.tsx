@@ -22,7 +22,6 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<OTRecord>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredRecords = useMemo(() => {
     const target = parseISO(targetDate);

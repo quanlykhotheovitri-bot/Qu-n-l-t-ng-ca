@@ -19,14 +19,6 @@ const generateId = () => {
   }
 };
 
-const generateId = () => {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  }
-};
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('registration');
   const [records, setRecords] = useState<OTRecord[]>(() => {
@@ -54,23 +46,6 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
     setRecords(prev => [record, ...prev]);
-  };
-
-  const addRecords = (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
-    const finalRecords: OTRecord[] = newRecords.map(nr => ({
-      ...nr,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    }));
-    setRecords(prev => [...finalRecords, ...prev]);
-    
-    if (newEmployees.length > 0) {
-      setEmployees(prev => {
-        const existingCodes = new Set(prev.map(e => e.employeeCode));
-        const trulyNew = newEmployees.filter(e => !existingCodes.has(e.employeeCode));
-        return [...prev, ...trulyNew];
-      });
-    }
   };
 
   const addRecords = (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Clock, List, AlertTriangle, Menu, X, ChevronRight } from 'lucide-react';
+import { Layout, Clock, List, AlertTriangle, Menu, X, ChevronRight, Calendar } from 'lucide-react';
 import { OTRecord, Employee } from './types';
 import Registration from './components/Registration';
 import OTList from './components/OTList';
+import HistoryList from './components/HistoryList';
 import AlertList from './components/AlertList';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_EMPLOYEES } from './constants';
 
-type Tab = 'registration' | 'list' | 'alerts';
+type Tab = 'registration' | 'list' | 'history' | 'alerts';
 
 const generateId = () => {
   try {
@@ -47,6 +48,23 @@ export default function App() {
     setRecords(prev => [record, ...prev]);
   };
 
+  const addRecords = (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
+    const finalRecords: OTRecord[] = newRecords.map(nr => ({
+      ...nr,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    }));
+    setRecords(prev => [...finalRecords, ...prev]);
+    
+    if (newEmployees.length > 0) {
+      setEmployees(prev => {
+        const existingCodes = new Set(prev.map(e => e.employeeCode));
+        const trulyNew = newEmployees.filter(e => !existingCodes.has(e.employeeCode));
+        return [...prev, ...trulyNew];
+      });
+    }
+  };
+
   const updateRecord = (id: string, updatedFields: Partial<OTRecord>) => {
     setRecords(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
   };
@@ -58,6 +76,7 @@ export default function App() {
   const navItems = [
     { id: 'registration' as Tab, label: 'Đăng ký tăng ca', icon: Clock, info: 'Nhập thông tin OT hàng ngày' },
     { id: 'list' as Tab, label: 'Danh sách tăng ca', icon: List, info: 'Xem & xuất báo cáo Excel' },
+    { id: 'history' as Tab, label: 'Lịch sử tăng ca', icon: Calendar, info: 'Lịch sử toàn bộ dữ liệu' },
     { id: 'alerts' as Tab, label: 'Danh sách vượt ngưỡng', icon: AlertTriangle, info: 'Cảnh báo 12h/40h/300h' },
   ];
 
@@ -167,6 +186,13 @@ export default function App() {
                   employees={employees} 
                   onUpdateRecord={updateRecord}
                   onDeleteRecord={deleteRecord}
+                />
+              )}
+              {activeTab === 'history' && (
+                <HistoryList 
+                  records={records} 
+                  employees={employees}
+                  onAddRecords={addRecords}
                 />
               )}
               {activeTab === 'alerts' && (

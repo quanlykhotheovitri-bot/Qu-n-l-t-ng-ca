@@ -38,7 +38,7 @@ export default function App() {
     if (!isSupabaseConfigured) return;
 
     const fetchData = async () => {
-      setLoading(true);
+      // Don't show loading spinner every time for background sync, only on first load
       try {
         const { data: empData } = await supabase.from('employees').select('*');
         if (empData) setEmployees(empData.map(e => ({
@@ -50,30 +50,33 @@ export default function App() {
         })));
 
         const { data: recData } = await supabase.from('records').select('*').order('created_at', { ascending: false });
-        if (recData) setRecords(recData.map(r => ({
-          id: r.id,
-          employeeId: r.employee_id,
-          employeeName: r.employee_name,
-          employeeCode: r.employee_code,
-          department: r.department,
-          jobTitle: r.job_title,
-          date: r.date,
-          startTime: r.start_time,
-          endTime: r.end_time,
-          hours: Number(r.hours),
-          reason: r.reason,
-          createdAt: r.created_at
-        })));
+        if (recData) {
+          const mappedRecords = recData.map(r => ({
+            id: r.id,
+            employeeId: r.employee_id || '',
+            employeeName: r.employee_name || '',
+            employeeCode: r.employee_code || '',
+            department: r.department || '',
+            jobTitle: r.job_title || '',
+            date: r.date,
+            startTime: r.start_time,
+            endTime: r.end_time,
+            hours: Number(r.hours),
+            reason: r.reason || '',
+            createdAt: r.created_at
+          }));
+          setRecords(mappedRecords);
+        }
       } catch (err) {
         console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchData();
+    // Initial fetch
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
 
-    // Set up Realtime subscriptions
+    // Set up Realtime subscriptions with immediate refresh on change
     const empSub = supabase.channel('employees_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
         fetchData();

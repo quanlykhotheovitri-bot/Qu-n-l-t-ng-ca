@@ -8,7 +8,7 @@ import AlertList from './components/AlertList';
 import Login from './components/Login';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 type Tab = 'registration' | 'list' | 'history' | 'alerts';
 
@@ -35,6 +35,8 @@ export default function App() {
 
   // Sync initial data from Supabase
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -109,6 +111,10 @@ export default function App() {
   const canDelete = user?.role === 'admin';
 
   const addRecord = async (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
+    if (!isSupabaseConfigured) {
+      alert("Cảnh báo: Supabase chưa được cấu hình. Vui lòng thêm key vào Settings.");
+      return;
+    }
     const id = generateId();
     try {
       const { error } = await supabase.from('records').insert([{
@@ -127,41 +133,67 @@ export default function App() {
       if (error) throw error;
     } catch (error) {
       console.error("Error adding record:", error);
+      alert("Lỗi khi lưu dữ liệu. Vui lòng kiểm tra lại kết nối.");
     }
   };
 
   const addRecords = async (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
+    if (!isSupabaseConfigured) {
+      alert("Cảnh báo: Supabase chưa được cấu hình.");
+      return;
+    }
+    setLoading(true);
     try {
+      console.log(`Starting upload: ${newRecords.length} records, ${newEmployees.length} employees`);
+      
+      // 1. Handle employees first
       if (newEmployees.length > 0) {
-        const existingCodes = new Set(employees.map(e => e.employeeCode));
-        const trulyNew = newEmployees.filter(e => !existingCodes.has(e.employeeCode));
-        if (trulyNew.length > 0) {
-          await supabase.from('employees').insert(trulyNew.map(e => ({
+        const { error: empError } = await supabase.from('employees').upsert(
+          newEmployees.map(e => ({
             id: e.id,
             employee_code: e.employeeCode,
             name: e.name,
             department: e.department,
             job_title: e.jobTitle
-          })));
+          })),
+          { onConflict: 'employee_code' }
+        );
+        if (empError) {
+          console.error("Employee Upsert Error:", empError);
+          throw new Error(`Lỗi lưu nhân viên: ${empError.message}`);
         }
       }
 
-      const { error } = await supabase.from('records').insert(newRecords.map(nr => ({
-        id: generateId(),
-        employee_id: nr.employeeId,
-        employee_name: nr.employeeName,
-        employee_code: nr.employeeCode,
-        department: nr.department,
-        job_title: nr.jobTitle,
-        date: nr.date,
-        start_time: nr.startTime,
-        end_time: nr.endTime,
-        hours: nr.hours,
-        reason: nr.reason
-      })));
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error adding bulk records:", error);
+      // 2. Insert records in chunks if there are many
+      const chunkSize = 200;
+      for (let i = 0; i < newRecords.length; i += chunkSize) {
+        const chunk = newRecords.slice(i, i + chunkSize);
+        const { error: recError } = await supabase.from('records').insert(chunk.map(nr => ({
+          id: generateId(),
+          employee_id: nr.employeeId,
+          employee_name: nr.employeeName,
+          employee_code: nr.employeeCode,
+          department: nr.department,
+          job_title: nr.jobTitle,
+          date: nr.date,
+          start_time: nr.startTime,
+          end_time: nr.endTime,
+          hours: nr.hours,
+          reason: nr.reason
+        })));
+        
+        if (recError) {
+          console.error("Record Insert Error at chunk", i, recError);
+          throw new Error(`Lỗi lưu bản ghi tăng ca (dòng ${i}+): ${recError.message}`);
+        }
+      }
+
+      alert(`Hoàn tất! Đã lưu thành công ${newRecords.length} bản ghi và ${newEmployees.length} nhân viên vào Supabase.`);
+    } catch (error: any) {
+      console.error("Critical Upload Error:", error);
+      alert(error.message || "Có lỗi không xác định xảy ra khi lưu dữ liệu.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -233,6 +265,25 @@ export default function App() {
     { id: 'history' as Tab, label: 'Lịch sử', icon: Calendar, info: 'Lịch sử toàn bộ dữ liệu' },
     { id: 'alerts' as Tab, label: 'Cảnh báo', icon: AlertTriangle, info: 'Cảnh báo 12h/40h/300h' },
   ];
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-center">
+        <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full border-4 border-red-500">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Chưa cấu hình Supabase</h2>
+          <p className="text-slate-600 mb-6 text-sm">
+            Vui lòng vào <b>Settings {'>'} Environment Variables</b> và thêm:<br/>
+            <code className="bg-slate-100 p-1 rounded inline-block mt-2">VITE_SUPABASE_URL</code><br/>
+            <code className="bg-slate-100 p-1 rounded inline-block mt-1">VITE_SUPABASE_ANON_KEY</code>
+          </p>
+          <div className="text-xs text-slate-400 bg-slate-50 p-3 rounded-xl">
+            Ứng dụng cần cơ sở dữ liệu Supabase để đồng bộ dữ liệu giữa máy tính và điện thoại.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -145,8 +145,8 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
       });
 
       if (newRecords.length > 0) {
-        onAddRecords(newRecords, newEmployeesFound);
-        alert(`Đã tải lên thành công ${newRecords.length} bản ghi${newEmployeesFound.length > 0 ? ` và thêm ${newEmployeesFound.length} nhân viên mới` : ''}!`);
+        await onAddRecords(newRecords, newEmployeesFound);
+        // The success message is now handled by the parent component or happens after await
       } else {
         alert('Không tìm thấy dữ liệu hợp lệ trong file. Vui lòng kiểm tra lại định dạng file mẫu.');
       }

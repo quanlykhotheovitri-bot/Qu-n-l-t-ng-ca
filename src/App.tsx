@@ -8,9 +8,7 @@ import AlertList from './components/AlertList';
 import Login from './components/Login';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { db, auth } from './lib/firebase';
+import { supabase } from './lib/supabase';
 
 type Tab = 'registration' | 'list' | 'history' | 'alerts';
 
@@ -30,101 +28,138 @@ const generateId = () => {
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('registration');
   const [user, setUser] = useState<UserState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<OTRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
 
-  // Auth synchronization
+  // Sync initial data from Supabase
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        // Here we define role based on email or a specific flag
-        // For simplicity, we can use a list of admins or check for certain emails
-        const isAdminEmail = firebaseUser.email === 'admin@otmaster.com' || firebaseUser.email === 'quanlykhotheovitri@gmail.com';
-        setUser({
-          username: firebaseUser.displayName || firebaseUser.email || 'User',
-          role: isAdminEmail ? 'admin' : 'user'
-        });
-      } else {
-        setUser(null);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const { data: empData } = await supabase.from('employees').select('*');
+        if (empData) setEmployees(empData.map(e => ({
+          id: e.id,
+          employeeCode: e.employee_code,
+          name: e.name,
+          department: e.department,
+          jobTitle: e.job_title
+        })));
+
+        const { data: recData } = await supabase.from('records').select('*').order('created_at', { ascending: false });
+        if (recData) setRecords(recData.map(r => ({
+          id: r.id,
+          employeeId: r.employee_id,
+          employeeName: r.employee_name,
+          employeeCode: r.employee_code,
+          department: r.department,
+          jobTitle: r.job_title,
+          date: r.date,
+          startTime: r.start_time,
+          endTime: r.end_time,
+          hours: Number(r.hours),
+          reason: r.reason,
+          createdAt: r.created_at
+        })));
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    };
+
+    fetchData();
+
+    // Set up Realtime subscriptions
+    const empSub = supabase.channel('employees_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    const recSub = supabase.channel('records_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'records' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(empSub);
+      supabase.removeChannel(recSub);
+    };
   }, []);
 
-  // Data synchronization - Records
   useEffect(() => {
-    if (!user) return;
-    const q = query(collection(db, 'records'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OTRecord));
-      setRecords(docs);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  // Data synchronization - Employees
-  useEffect(() => {
-    if (!user) return;
-    const unsubscribe = onSnapshot(collection(db, 'employees'), (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-      setEmployees(docs);
-    });
-    return () => unsubscribe();
+    if (user) {
+      localStorage.setItem('ot_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('ot_user');
+    }
   }, [user]);
 
   const handleLogin = (username: string, role: 'admin' | 'user') => {
-    // This is now handled by onAuthStateChanged after Google login
-    // but we can keep it for manual overrides if needed, though not recommended with Firebase
+    setUser({ username, role });
   };
 
-  const handleLogout = async () => {
-    await auth.signOut();
+  const handleLogout = () => {
+    setUser(null);
   };
 
   const canDelete = user?.role === 'admin';
 
   const addRecord = async (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
     const id = generateId();
-    const record: OTRecord = {
-      ...newRecord,
-      id,
-      createdAt: new Date().toISOString(),
-    };
     try {
-      await setDoc(doc(db, 'records', id), record);
+      const { error } = await supabase.from('records').insert([{
+        id,
+        employee_id: newRecord.employeeId,
+        employee_name: newRecord.employeeName,
+        employee_code: newRecord.employeeCode,
+        department: newRecord.department,
+        job_title: newRecord.jobTitle,
+        date: newRecord.date,
+        start_time: newRecord.startTime,
+        end_time: newRecord.endTime,
+        hours: newRecord.hours,
+        reason: newRecord.reason
+      }]);
+      if (error) throw error;
     } catch (error) {
       console.error("Error adding record:", error);
     }
   };
 
   const addRecords = async (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
-    const batch = writeBatch(db);
-    
-    newRecords.forEach(nr => {
-      const id = generateId();
-      const record: OTRecord = {
-        ...nr,
-        id,
-        createdAt: new Date().toISOString(),
-      };
-      batch.set(doc(db, 'records', id), record);
-    });
-
-    if (newEmployees.length > 0) {
-      const existingCodes = new Set(employees.map(e => e.employeeCode));
-      newEmployees.forEach(e => {
-        if (!existingCodes.has(e.employeeCode)) {
-          const id = generateId();
-          batch.set(doc(db, 'employees', id), { ...e, id });
-        }
-      });
-    }
-
     try {
-      await batch.commit();
+      if (newEmployees.length > 0) {
+        const existingCodes = new Set(employees.map(e => e.employeeCode));
+        const trulyNew = newEmployees.filter(e => !existingCodes.has(e.employeeCode));
+        if (trulyNew.length > 0) {
+          await supabase.from('employees').insert(trulyNew.map(e => ({
+            id: e.id,
+            employee_code: e.employeeCode,
+            name: e.name,
+            department: e.department,
+            job_title: e.jobTitle
+          })));
+        }
+      }
+
+      const { error } = await supabase.from('records').insert(newRecords.map(nr => ({
+        id: generateId(),
+        employee_id: nr.employeeId,
+        employee_name: nr.employeeName,
+        employee_code: nr.employeeCode,
+        department: nr.department,
+        job_title: nr.jobTitle,
+        date: nr.date,
+        start_time: nr.startTime,
+        end_time: nr.endTime,
+        hours: nr.hours,
+        reason: nr.reason
+      })));
+      if (error) throw error;
     } catch (error) {
       console.error("Error adding bulk records:", error);
     }
@@ -132,7 +167,15 @@ export default function App() {
 
   const updateRecord = async (id: string, updatedFields: Partial<OTRecord>) => {
     try {
-      await setDoc(doc(db, 'records', id), updatedFields, { merge: true });
+      const dbFields: any = {};
+      if (updatedFields.date) dbFields.date = updatedFields.date;
+      if (updatedFields.startTime) dbFields.start_time = updatedFields.startTime;
+      if (updatedFields.endTime) dbFields.end_time = updatedFields.endTime;
+      if (updatedFields.hours) dbFields.hours = updatedFields.hours;
+      if (updatedFields.reason !== undefined) dbFields.reason = updatedFields.reason;
+
+      const { error } = await supabase.from('records').update(dbFields).eq('id', id);
+      if (error) throw error;
     } catch (error) {
       console.error("Error updating record:", error);
     }
@@ -141,7 +184,7 @@ export default function App() {
   const deleteRecord = async (id: string) => {
     if (!canDelete) return;
     try {
-      await deleteDoc(doc(db, 'records', id));
+      await supabase.from('records').delete().eq('id', id);
     } catch (error) {
       console.error("Error deleting record:", error);
     }
@@ -149,12 +192,8 @@ export default function App() {
 
   const deleteRecords = async (ids: string[]) => {
     if (!canDelete) return;
-    const batch = writeBatch(db);
-    ids.forEach(id => {
-      batch.delete(doc(db, 'records', id));
-    });
     try {
-      await batch.commit();
+      await supabase.from('records').delete().in('id', ids);
     } catch (error) {
       console.error("Error deleting multi records:", error);
     }
@@ -162,25 +201,29 @@ export default function App() {
 
   const clearAllRecords = async () => {
     if (!canDelete) return;
-    const batch = writeBatch(db);
-    records.forEach(r => {
-      batch.delete(doc(db, 'records', r.id));
-    });
     try {
-      await batch.commit();
+      await supabase.from('records').delete().neq('id', 'null');
     } catch (error) {
       console.error("Error clearing records:", error);
     }
   };
 
   const updateEmployees = async (updater: (prev: Employee[]) => Employee[]) => {
-    // This is tricky because we usually want direct firestore updates
-    // For manual employee additions:
     const newEmployees = updater(employees);
     const trulyNew = newEmployees.filter(ne => !employees.find(e => e.id === ne.id));
     
-    for (const emp of trulyNew) {
-      await setDoc(doc(db, 'employees', emp.id), emp);
+    if (trulyNew.length > 0) {
+      try {
+        await supabase.from('employees').insert(trulyNew.map(e => ({
+          id: e.id,
+          employee_code: e.employeeCode,
+          name: e.name,
+          department: e.department,
+          job_title: e.jobTitle
+        })));
+      } catch (err) {
+        console.error("Error adding employee:", err);
+      }
     }
   };
 

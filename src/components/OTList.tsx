@@ -3,8 +3,8 @@ import { Download, Filter, Calendar, List, Edit2, Trash2, Save, X } from 'lucide
 import { OTRecord, Employee } from '../types';
 import { MOCK_EMPLOYEES } from '../constants';
 import { cn } from '../lib/utils';
-import { format, parseISO, isSameDay, isSameWeek, isSameYear, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
-import { isSameCycleMonth, getCycleIntervalForDate } from '../lib/dateUtils';
+import { format, parseISO, isSameDay, isSameWeek, startOfWeek, endOfWeek } from 'date-fns';
+import { isSameCycleMonth, getCycleIntervalForDate, getCycleYear } from '../lib/dateUtils';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -34,7 +34,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
         case 'day': return isSameDay(recordDate, target);
         case 'week': return isSameWeek(recordDate, target, { weekStartsOn: 1 });
         case 'month': return isSameCycleMonth(recordDate, target);
-        case 'year': return isSameYear(recordDate, target);
+        case 'year': return getCycleYear(recordDate) === getCycleYear(target);
         default: return true;
       }
     }).sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
@@ -45,8 +45,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
     const weekStart = startOfWeek(target, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(target, { weekStartsOn: 1 });
     const cycleInterval = getCycleIntervalForDate(target);
-    const yearStart = startOfYear(target);
-    const yearEnd = endOfYear(target);
+    const targetCycleYear = getCycleYear(target);
 
     const summaryMap: Record<string, { employee: Employee; week: number; month: number; year: number }> = {};
 
@@ -60,8 +59,8 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
       
       if (!summaryMap[empId]) return;
 
-      // Year total
-      if (recordDate >= yearStart && recordDate <= yearEnd) {
+      // Year total (Cycle Year)
+      if (getCycleYear(recordDate) === targetCycleYear) {
         summaryMap[empId].year += r.hours;
       }
       // Month total (Cycle)

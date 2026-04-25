@@ -16,6 +16,13 @@ export function getCycleMonth(date: Date): { month: number; year: number } {
 }
 
 /**
+ * Returns the cycle year for a given date.
+ */
+export function getCycleYear(date: Date): number {
+  return getCycleMonth(date).year;
+}
+
+/**
  * Returns the period interval for a given cycle month and year.
  * Period: from 26th of (month-1) to 25th of (month)
  */

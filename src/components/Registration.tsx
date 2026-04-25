@@ -2,8 +2,8 @@ import React, { useState, useMemo, useRef } from 'react';
 import { Search, Plus, User, Clock, AlertTriangle, Upload, UserPlus, Trash2 } from 'lucide-react';
 import { Employee, OTRecord, LIMITS } from '../types';
 import { cn } from '../lib/utils';
-import { format, startOfWeek, startOfYear, parseISO } from 'date-fns';
-import { getCycleIntervalForDate } from '../lib/dateUtils';
+import { format, startOfWeek, parseISO } from 'date-fns';
+import { getCycleIntervalForDate, getCycleYear, getCycleMonth } from '../lib/dateUtils';
 import * as XLSX from 'xlsx';
 
 interface RegistrationProps {
@@ -50,7 +50,7 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
     // Monday as start of week
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
     const cycleInterval = getCycleIntervalForDate(now);
-    const yearStart = startOfYear(now);
+    const currentCycleYear = getCycleYear(now);
 
     const statsMap: Record<string, { week: number; month: number; year: number }> = {};
     
@@ -74,8 +74,8 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
         if (recordDate >= cycleInterval.start && recordDate <= cycleInterval.end) {
           statsMap[r.employeeId].month += r.hours;
         }
-        // Check year
-        if (recordDate >= yearStart) {
+        // Check year (Cycle Year)
+        if (getCycleYear(recordDate) === currentCycleYear) {
           statsMap[r.employeeId].year += r.hours;
         }
       } catch (e) {

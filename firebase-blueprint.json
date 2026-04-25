@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "Employee": {
+      "title": "Employee",
+      "description": "System employees",
+      "type": "object",
+      "properties": {
+        "employeeCode": { "type": "string" },
+        "name": { "type": "string" },
+        "department": { "type": "string" },
+        "jobTitle": { "type": "string" }
+      },
+      "required": ["employeeCode", "name", "department"]
+    },
+    "OTRecord": {
+      "title": "OTRecord",
+      "description": "Overtime registration records",
+      "type": "object",
+      "properties": {
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeCode": { "type": "string" },
+        "department": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "hours": { "type": "number" },
+        "reason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["employeeId", "date", "startTime", "endTime", "hours"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Application administrators",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Collection of employees"
+    },
+    "/records/{recordId}": {
+      "schema": "OTRecord",
+      "description": "Collection of OT records"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Collection of system admins"
+    }
+  }
+}

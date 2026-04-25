@@ -489,13 +489,13 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                         checked={selectedEmployees.length === employees.length && employees.length > 0}
                       />
                     </th>
-                    <th className="px-4 py-3 border-b border-slate-200 text-center w-12 text-[10px] font-bold text-slate-500 uppercase">STT</th>
+                    <th className="hidden sm:table-cell px-4 py-3 border-b border-slate-200 text-center w-12 text-[10px] font-bold text-slate-500 uppercase">STT</th>
                     <th className="px-4 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">MNV</th>
-                    <th className="px-6 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">Họ và tên</th>
-                    <th className="px-6 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">Bộ phận</th>
-                    <th className="px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">Tuần</th>
-                    <th className="px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">Tháng</th>
-                    <th className="px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">Năm</th>
+                    <th className="px-3 sm:px-6 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">Họ và tên</th>
+                    <th className="hidden md:table-cell px-6 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">Bộ phận</th>
+                    <th className="px-2 sm:px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">T</th>
+                    <th className="px-2 sm:px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">M</th>
+                    <th className="px-2 sm:px-3 py-3 border-b border-slate-200 text-center text-[10px] font-bold text-indigo-600 uppercase">Y</th>
                     <th className="px-4 py-3 border-b border-slate-200 w-24"></th>
                   </tr>
                 </thead>
@@ -518,38 +518,38 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                             }}
                           />
                         </td>
-                        <td className="px-4 py-3 text-center text-[10px] text-slate-300 font-mono italic">#{idx + 1}</td>
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-indigo-500 italic bg-indigo-50/20">{emp.employeeCode}</td>
-                        <td className="px-6 py-3 font-bold text-slate-800 uppercase text-xs tracking-tighter">{emp.name}</td>
-                        <td className="px-6 py-3 text-xs text-slate-500 italic">{emp.department}</td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="hidden sm:table-cell px-4 py-3 text-center text-[10px] text-slate-300 font-mono italic">#{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono text-[10px] sm:text-xs font-bold text-indigo-500 italic bg-indigo-50/20">{emp.employeeCode}</td>
+                        <td className="px-3 sm:px-6 py-3 font-bold text-slate-800 uppercase text-[10px] sm:text-xs tracking-tighter leading-tight">{emp.name}</td>
+                        <td className="hidden md:table-cell px-6 py-3 text-xs text-slate-500 italic">{emp.department}</td>
+                        <td className="px-2 sm:px-3 py-3 text-center">
                           <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            "text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded",
                             (employeeStats[emp.id]?.week || 0) >= LIMITS.week ? "bg-red-100 text-red-600" : 
                             (employeeStats[emp.id]?.week || 0) >= LIMITS.week * 0.8 ? "bg-orange-100 text-orange-600" : 
                             "bg-slate-100 text-slate-700"
                           )}>
-                            {employeeStats[emp.id]?.week || 0}h
+                            {employeeStats[emp.id]?.week || 0}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-2 sm:px-3 py-3 text-center">
                           <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            "text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded",
                             (employeeStats[emp.id]?.month || 0) >= LIMITS.month ? "bg-red-100 text-red-600" : 
                             (employeeStats[emp.id]?.month || 0) >= LIMITS.month * 0.8 ? "bg-orange-100 text-orange-600" : 
                             "bg-slate-100 text-slate-700"
                           )}>
-                            {employeeStats[emp.id]?.month || 0}h
+                            {employeeStats[emp.id]?.month || 0}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-2 sm:px-3 py-3 text-center">
                           <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            "text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded",
                             (employeeStats[emp.id]?.year || 0) >= LIMITS.year ? "bg-red-100 text-red-600" : 
                             (employeeStats[emp.id]?.year || 0) >= LIMITS.year * 0.8 ? "bg-orange-100 text-orange-600" : 
                             "bg-slate-100 text-slate-700"
                           )}>
-                            {employeeStats[emp.id]?.year || 0}h
+                            {employeeStats[emp.id]?.year || 0}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">

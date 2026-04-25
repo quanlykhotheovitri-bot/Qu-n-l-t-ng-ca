@@ -8,7 +8,9 @@ import AlertList from './components/AlertList';
 import Login from './components/Login';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
-import { MOCK_EMPLOYEES } from './constants';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from './lib/firebase';
 
 type Tab = 'registration' | 'list' | 'history' | 'alerts';
 
@@ -27,89 +29,159 @@ const generateId = () => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('registration');
-  const [user, setUser] = useState<UserState | null>(() => {
-    const saved = localStorage.getItem('ot_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [records, setRecords] = useState<OTRecord[]>(() => {
-    const saved = localStorage.getItem('ot_records');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    const saved = localStorage.getItem('ot_employees');
-    return saved ? JSON.parse(saved) : MOCK_EMPLOYEES;
-  });
+  const [user, setUser] = useState<UserState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState<OTRecord[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
 
+  // Auth synchronization
   useEffect(() => {
-    localStorage.setItem('ot_records', JSON.stringify(records));
-  }, [records]);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Here we define role based on email or a specific flag
+        // For simplicity, we can use a list of admins or check for certain emails
+        const isAdminEmail = firebaseUser.email === 'admin@otmaster.com' || firebaseUser.email === 'quanlykhotheovitri@gmail.com';
+        setUser({
+          username: firebaseUser.displayName || firebaseUser.email || 'User',
+          role: isAdminEmail ? 'admin' : 'user'
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // Data synchronization - Records
   useEffect(() => {
-    localStorage.setItem('ot_employees', JSON.stringify(employees));
-  }, [employees]);
+    if (!user) return;
+    const q = query(collection(db, 'records'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OTRecord));
+      setRecords(docs);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
+  // Data synchronization - Employees
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('ot_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('ot_user');
-    }
+    if (!user) return;
+    const unsubscribe = onSnapshot(collection(db, 'employees'), (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+      setEmployees(docs);
+    });
+    return () => unsubscribe();
   }, [user]);
 
   const handleLogin = (username: string, role: 'admin' | 'user') => {
-    setUser({ username, role });
+    // This is now handled by onAuthStateChanged after Google login
+    // but we can keep it for manual overrides if needed, though not recommended with Firebase
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await auth.signOut();
   };
 
   const canDelete = user?.role === 'admin';
 
-  const addRecord = (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
+  const addRecord = async (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
+    const id = generateId();
     const record: OTRecord = {
       ...newRecord,
-      id: generateId(),
+      id,
       createdAt: new Date().toISOString(),
     };
-    setRecords(prev => [record, ...prev]);
-  };
-
-  const addRecords = (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
-    const finalRecords: OTRecord[] = newRecords.map(nr => ({
-      ...nr,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    }));
-    setRecords(prev => [...finalRecords, ...prev]);
-    
-    if (newEmployees.length > 0) {
-      setEmployees(prev => {
-        const existingCodes = new Set(prev.map(e => e.employeeCode));
-        const trulyNew = newEmployees.filter(e => !existingCodes.has(e.employeeCode));
-        return [...prev, ...trulyNew];
-      });
+    try {
+      await setDoc(doc(db, 'records', id), record);
+    } catch (error) {
+      console.error("Error adding record:", error);
     }
   };
 
-  const updateRecord = (id: string, updatedFields: Partial<OTRecord>) => {
-    setRecords(prev => prev.map(r => r.id === id ? { ...r, ...updatedFields } : r));
+  const addRecords = async (newRecords: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees: Employee[] = []) => {
+    const batch = writeBatch(db);
+    
+    newRecords.forEach(nr => {
+      const id = generateId();
+      const record: OTRecord = {
+        ...nr,
+        id,
+        createdAt: new Date().toISOString(),
+      };
+      batch.set(doc(db, 'records', id), record);
+    });
+
+    if (newEmployees.length > 0) {
+      const existingCodes = new Set(employees.map(e => e.employeeCode));
+      newEmployees.forEach(e => {
+        if (!existingCodes.has(e.employeeCode)) {
+          const id = generateId();
+          batch.set(doc(db, 'employees', id), { ...e, id });
+        }
+      });
+    }
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error adding bulk records:", error);
+    }
   };
 
-  const deleteRecord = (id: string) => {
-    if (!canDelete) return;
-    setRecords(prev => prev.filter(r => r.id !== id));
+  const updateRecord = async (id: string, updatedFields: Partial<OTRecord>) => {
+    try {
+      await setDoc(doc(db, 'records', id), updatedFields, { merge: true });
+    } catch (error) {
+      console.error("Error updating record:", error);
+    }
   };
 
-  const deleteRecords = (ids: string[]) => {
+  const deleteRecord = async (id: string) => {
     if (!canDelete) return;
-    setRecords(prev => prev.filter(r => !ids.includes(r.id)));
+    try {
+      await deleteDoc(doc(db, 'records', id));
+    } catch (error) {
+      console.error("Error deleting record:", error);
+    }
   };
 
-  const clearAllRecords = () => {
+  const deleteRecords = async (ids: string[]) => {
     if (!canDelete) return;
-    setRecords([]);
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+      batch.delete(doc(db, 'records', id));
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error deleting multi records:", error);
+    }
+  };
+
+  const clearAllRecords = async () => {
+    if (!canDelete) return;
+    const batch = writeBatch(db);
+    records.forEach(r => {
+      batch.delete(doc(db, 'records', r.id));
+    });
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing records:", error);
+    }
+  };
+
+  const updateEmployees = async (updater: (prev: Employee[]) => Employee[]) => {
+    // This is tricky because we usually want direct firestore updates
+    // For manual employee additions:
+    const newEmployees = updater(employees);
+    const trulyNew = newEmployees.filter(ne => !employees.find(e => e.id === ne.id));
+    
+    for (const emp of trulyNew) {
+      await setDoc(doc(db, 'employees', emp.id), emp);
+    }
   };
 
   const navItems = [
@@ -118,6 +190,17 @@ export default function App() {
     { id: 'history' as Tab, label: 'Lịch sử', icon: Calendar, info: 'Lịch sử toàn bộ dữ liệu' },
     { id: 'alerts' as Tab, label: 'Cảnh báo', icon: AlertTriangle, info: 'Cảnh báo 12h/40h/300h' },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
@@ -235,7 +318,7 @@ export default function App() {
                     onAddRecord={addRecord} 
                     records={records} 
                     employees={employees}
-                    setEmployees={setEmployees}
+                    setEmployees={updateEmployees}
                   />
                 )}
                 {activeTab === 'list' && (

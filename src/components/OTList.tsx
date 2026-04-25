@@ -534,26 +534,26 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">Tuần</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">Tháng</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30">Năm</th>
+                  <th className="hidden sm:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
+                  <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
+                  <th className="hidden md:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">T</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">M</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30">Y</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {summaryData.length > 0 ? summaryData.map((s, i) => (
                   <tr key={s.employee.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
-                    <td className="px-6 py-4 border-r border-slate-100">
-                      <div className="font-bold text-slate-800 uppercase leading-none mb-1">{s.employee.name}</div>
-                      <div className="text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{s.employee.employeeCode}</div>
+                    <td className="hidden sm:table-cell px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
+                    <td className="px-4 sm:px-6 py-4 border-r border-slate-100">
+                      <div className="font-bold text-slate-800 uppercase leading-tight text-[10px] sm:text-sm mb-1">{s.employee.name}</div>
+                      <div className="text-[9px] sm:text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{s.employee.employeeCode}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium border-r border-slate-100 italic">{s.employee.department}</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100">{s.week}h</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100">{s.month}h</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10">{s.year}h</td>
+                    <td className="hidden md:table-cell px-6 py-4 text-slate-600 font-medium border-r border-slate-100 italic">{s.employee.department}</td>
+                    <td className="px-3 sm:px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100 text-xs">{s.week}</td>
+                    <td className="px-3 sm:px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100 text-xs">{s.month}</td>
+                    <td className="px-3 sm:px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 text-xs">{s.year}</td>
                   </tr>
                 )) : (
                   <tr>
@@ -569,14 +569,14 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
             <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Ngày</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Số giờ</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Thời gian</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Lý do</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Thao tác</th>
+                <th className="hidden lg:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
+                <th className="hidden xl:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Ngày</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Giờ</th>
+                <th className="hidden md:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Thời gian</th>
+                <th className="hidden lg:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Lý do</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">#</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
@@ -590,28 +590,28 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
 
                 return (
                   <tr key={r.id} className={cn("hover:bg-slate-50 group transition-colors", isEditing && "bg-indigo-50/50")}>
-                    <td className="px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
-                    <td className="px-6 py-4 border-r border-slate-100">
-                      <div className="font-bold text-slate-800 uppercase leading-none mb-1">{emp?.name}</div>
-                      <div className="text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{emp?.employeeCode}</div>
+                    <td className="hidden lg:table-cell px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
+                    <td className="px-4 sm:px-6 py-4 border-r border-slate-100">
+                      <div className="font-bold text-slate-800 uppercase leading-tight text-[10px] sm:text-sm mb-1">{emp?.name}</div>
+                      <div className="text-[9px] sm:text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{emp?.employeeCode}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 border-r border-slate-100">{emp?.department}</td>
-                    <td className="px-6 py-4 text-slate-600 border-r border-slate-100 font-medium">
+                    <td className="hidden xl:table-cell px-6 py-4 text-slate-500 border-r border-slate-100">{emp?.department}</td>
+                    <td className="px-4 sm:px-6 py-4 text-slate-600 border-r border-slate-100 font-medium text-[10px] sm:text-xs">
                       {isEditing ? (
                         <input 
                           type="date" 
-                          className="px-2 py-1 border border-slate-200 rounded text-xs outline-none focus:border-indigo-500"
+                          className="px-2 py-1 border border-slate-200 rounded text-[10px] outline-none focus:border-indigo-500 w-full"
                           value={editValues.date}
                           onChange={(e) => handleEditChange('date', e.target.value)}
                         />
-                      ) : format(parseISO(r.date), 'dd/MM/yyyy')}
+                      ) : format(parseISO(r.date), 'dd/MM')}
                     </td>
-                    <td className="px-6 py-4 text-center border-r border-slate-100">
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-600 rounded font-bold text-xs">
-                        {isEditing ? editValues.hours : r.hours}h
+                    <td className="px-4 sm:px-6 py-4 text-center border-r border-slate-100">
+                      <span className="px-1.5 sm:px-2 py-1 bg-indigo-100 text-indigo-600 rounded font-bold text-[10px] sm:text-xs">
+                        {isEditing ? editValues.hours : r.hours}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center border-r border-slate-100">
+                    <td className="hidden md:table-cell px-6 py-4 text-center border-r border-slate-100">
                       {isEditing ? (
                         <div className="flex items-center gap-1">
                           <input 
@@ -632,7 +632,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                         <div className="text-[10px] font-bold text-slate-500 lowercase bg-slate-100 px-2 py-0.5 rounded-full inline-block">{r.startTime} - {r.endTime}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-400 italic max-w-xs truncate border-r border-slate-100">
+                    <td className="hidden lg:table-cell px-6 py-4 text-xs text-slate-400 italic max-w-xs truncate border-r border-slate-100">
                       {isEditing ? (
                         <textarea 
                           className="w-full px-2 py-1 border border-slate-200 rounded text-xs outline-none focus:border-indigo-500"
@@ -641,34 +641,34 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                         />
                       ) : (r.reason || '...')}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 sm:px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {isEditing ? (
                           <>
                             <button 
                               onClick={handleEditSave}
-                              className="p-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                              className="p-1 sm:p-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                             >
-                              <Save className="w-3.5 h-3.5" />
+                              <Save className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                             </button>
                             <button 
                               onClick={handleEditCancel}
-                              className="p-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
+                              className="p-1 sm:p-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                             </button>
                           </>
                         ) : deletingId === r.id ? (
                           <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
                             <button 
                               onClick={() => { onDeleteRecord(r.id); setDeletingId(null); }}
-                              className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700"
+                              className="px-1.5 sm:px-2 py-1 bg-red-600 text-white text-[9px] sm:text-[10px] font-bold rounded hover:bg-red-700"
                             >
                               Xóa
                             </button>
                             <button 
                               onClick={() => setDeletingId(null)}
-                              className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded"
+                              className="px-1.5 sm:px-2 py-1 bg-slate-100 text-slate-500 text-[9px] sm:text-[10px] font-bold rounded"
                             >
                               Hủy
                             </button>
@@ -677,16 +677,16 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                           <>
                             <button 
                               onClick={() => handleEditStart(r)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              className="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                             </button>
                             {canDelete && (
                               <button 
                                 onClick={() => setDeletingId(r.id)}
-                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                className="p-1.5 sm:p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                               </button>
                             )}
                           </>

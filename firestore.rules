@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Employee validation
+    function isValidEmployee(data) {
+      return data.employeeCode is string && data.employeeCode.size() <= 50 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.department is string && data.department.size() <= 50;
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(employeeId) && isValidEmployee(incoming());
+      allow update: if isAdmin() && isValidEmployee(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // OT Record validation
+    function isValidRecord(data) {
+      return data.employeeId is string && data.employeeId.size() <= 128 &&
+             data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.hours is number && data.hours >= 0 && data.hours <= 24 &&
+             data.startTime is string && data.endTime is string;
+    }
+
+    match /records/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(recordId) && isValidRecord(incoming());
+      allow update: if (isAdmin() || (isSignedIn() && incoming().employeeId == request.auth.uid)) && isValidRecord(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console for security
+    }
+  }
+}

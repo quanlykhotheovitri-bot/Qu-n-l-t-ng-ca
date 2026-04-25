@@ -273,7 +273,7 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200">
-                <th className="px-4 py-4 border-r border-slate-100 text-center w-12">
+                <th className="px-4 py-4 border-r border-slate-100 text-center w-10 sm:w-12">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -281,12 +281,12 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-16">STT</th>
-                <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-28">MNV</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Họ và tên</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center">Ngày</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Số giờ</th>
+                <th className="hidden sm:table-cell px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-16">STT</th>
+                <th className="px-3 sm:px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-24 sm:w-28">MNV</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Họ và tên</th>
+                <th className="hidden md:table-cell px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                <th className="px-4 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center">Ngày</th>
+                <th className="px-3 sm:px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Giờ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm italic">
@@ -310,20 +310,20 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
                           onChange={() => toggleSelect(r.id)}
                         />
                       </td>
-                      <td className="px-4 py-3 text-center text-slate-300 font-mono text-xs border-r border-slate-100">#{i + 1}</td>
-                      <td className="px-4 py-3 text-center border-r border-slate-100">
+                      <td className="hidden sm:table-cell px-4 py-3 text-center text-slate-300 font-mono text-xs border-r border-slate-100">#{i + 1}</td>
+                      <td className="px-3 sm:px-4 py-3 text-center border-r border-slate-100">
                         <span className="font-mono text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">
                           {emp?.employeeCode}
                         </span>
                       </td>
-                      <td className="px-6 py-3 font-bold text-slate-800 border-r border-slate-100 uppercase text-xs tracking-tighter">{emp?.name}</td>
-                      <td className="px-6 py-3 text-xs text-slate-600 border-r border-slate-100 italic">{emp?.department}</td>
-                      <td className="px-6 py-3 text-center text-slate-500 border-r border-slate-100 text-xs font-mono">
-                        {format(parseISO(r.date), 'dd/MM/yyyy')}
+                      <td className="px-4 sm:px-6 py-3 font-bold text-slate-800 border-r border-slate-100 uppercase text-[10px] sm:text-xs tracking-tighter leading-tight">{emp?.name}</td>
+                      <td className="hidden md:table-cell px-6 py-3 text-xs text-slate-600 border-r border-slate-100 italic">{emp?.department}</td>
+                      <td className="px-4 sm:px-6 py-3 text-center text-slate-500 border-r border-slate-100 text-[10px] sm:text-xs font-mono">
+                        {format(parseISO(r.date), 'dd/MM')}
                       </td>
-                      <td className="px-6 py-3 text-center">
-                        <span className="font-bold text-slate-800 text-xs">
-                          {r.hours}h
+                      <td className="px-3 sm:px-6 py-3 text-center">
+                        <span className="font-bold text-slate-800 text-[10px] sm:text-xs">
+                          {r.hours}
                         </span>
                       </td>
                     </tr>

@@ -73,6 +73,14 @@ export default function App() {
     setRecords(prev => prev.filter(r => r.id !== id));
   };
 
+  const deleteRecords = (ids: string[]) => {
+    setRecords(prev => prev.filter(r => !ids.includes(r.id)));
+  };
+
+  const clearAllRecords = () => {
+    setRecords([]);
+  };
+
   const navItems = [
     { id: 'registration' as Tab, label: 'Đăng ký tăng ca', icon: Clock, info: 'Nhập thông tin OT hàng ngày' },
     { id: 'list' as Tab, label: 'Danh sách tăng ca', icon: List, info: 'Xem & xuất báo cáo Excel' },
@@ -193,6 +201,8 @@ export default function App() {
                   records={records} 
                   employees={employees}
                   onAddRecords={addRecords}
+                  onDeleteRecords={deleteRecords}
+                  onClearAll={clearAllRecords}
                 />
               )}
               {activeTab === 'alerts' && (

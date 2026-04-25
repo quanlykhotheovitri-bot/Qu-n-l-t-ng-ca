@@ -4,16 +4,20 @@ import { OTRecord, Employee } from '../types';
 import { cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
 import ExcelJS from 'exceljs';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface HistoryListProps {
   records: OTRecord[];
   employees: Employee[];
   onAddRecords: (records: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees?: Employee[]) => void;
+  onDeleteRecords: (ids: string[]) => void;
+  onClearAll: () => void;
 }
 
-export default function HistoryList({ records, employees, onAddRecords }: HistoryListProps) {
+export default function HistoryList({ records, employees, onAddRecords, onDeleteRecords, onClearAll }: HistoryListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredHistory = useMemo(() => {
@@ -83,7 +87,7 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
       const newEmployeesFound: Employee[] = [];
       
       worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= 1) return; // Skip headers or empty rows if headers and data are further down
+        if (rowNumber <= 1) return;
 
         const mnv = row.getCell(2).text?.trim();
         const name = row.getCell(3).text?.trim();
@@ -99,7 +103,6 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
         if (dateVal instanceof Date) {
           dateStr = format(dateVal, 'yyyy-MM-dd');
         } else if (typeof dateVal === 'string') {
-          // Handle dd/MM/yyyy
           if (dateVal.includes('/')) {
             const parts = dateVal.split('/');
             if (parts.length === 3) {
@@ -155,44 +158,108 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredHistory.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredHistory.map(r => r.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} bản ghi đã chọn?`)) {
+      onDeleteRecords(selectedIds);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm("CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử tăng ca không? Hành động này không thể hoàn tác.")) {
+      onClearAll();
+      setSelectedIds([]);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên, mã NV, bộ phận..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="relative flex-1 min-w-[300px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên, mã NV, bộ phận..."
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleClearAll}
+              className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition-all"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Xóa tất cả
+            </button>
+            <button
+              onClick={downloadTemplate}
+              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Tải file mẫu
+            </button>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              {isUploading ? 'Đang tải...' : 'Tải lên Excel'}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={downloadTemplate}
-            className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
+
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between px-6 py-3 bg-indigo-50 border border-indigo-100 rounded-xl shadow-sm"
           >
-            <Download className="w-4 h-4" />
-            Tải file mẫu
-          </button>
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
-          >
-            <Upload className="w-4 h-4" />
-            {isUploading ? 'Đang tải...' : 'Tải lên Excel'}
-          </button>
-        </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-indigo-700">
+                Đang chọn: {selectedIds.length} bản ghi
+              </span>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-700 underline"
+              >
+                Bỏ chọn
+              </button>
+            </div>
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all shadow-md shadow-red-200"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Xóa mục đã chọn
+            </button>
+          </motion.div>
+        )}
       </div>
 
       {/* Main History Table */}
@@ -201,6 +268,14 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200">
+                <th className="px-4 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center w-12">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={filteredHistory.length > 0 && selectedIds.length === filteredHistory.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center w-16">
                   <div>Stt</div>
                   <div className="text-indigo-400 font-medium">No</div>
@@ -241,7 +316,18 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
                     jobTitle: r.jobTitle
                   };
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={r.id} className={cn(
+                      "hover:bg-slate-50 transition-colors",
+                      selectedIds.includes(r.id) && "bg-indigo-50/30"
+                    )}>
+                      <td className="px-4 py-3 text-center border-r border-slate-100">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={selectedIds.includes(r.id)}
+                          onChange={() => toggleSelect(r.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-center text-slate-500 font-medium border-r border-slate-100 italic">{i + 1}</td>
                       <td className="px-4 py-3 text-center border-r border-slate-100">
                         <span className="font-mono text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
@@ -264,7 +350,7 @@ export default function HistoryList({ records, employees, onAddRecords }: Histor
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center text-slate-300">
+                  <td colSpan={8} className="py-20 text-center text-slate-300">
                     <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 opacity-10" />
                     <p className="text-sm font-medium italic">Không có lịch sử tăng ca nào được tìm thấy</p>
                   </td>

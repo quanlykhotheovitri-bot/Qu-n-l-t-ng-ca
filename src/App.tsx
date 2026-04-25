@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Clock, List, AlertTriangle, Menu, X, ChevronRight, Calendar } from 'lucide-react';
+import { Layout, Clock, List, AlertTriangle, Menu, X, ChevronRight, Calendar, LogOut } from 'lucide-react';
 import { OTRecord, Employee } from './types';
 import Registration from './components/Registration';
 import OTList from './components/OTList';
 import HistoryList from './components/HistoryList';
 import AlertList from './components/AlertList';
+import Login from './components/Login';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_EMPLOYEES } from './constants';
 
 type Tab = 'registration' | 'list' | 'history' | 'alerts';
+
+interface UserState {
+  username: string;
+  role: 'admin' | 'user';
+}
 
 const generateId = () => {
   try {
@@ -21,6 +27,10 @@ const generateId = () => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('registration');
+  const [user, setUser] = useState<UserState | null>(() => {
+    const saved = localStorage.getItem('ot_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [records, setRecords] = useState<OTRecord[]>(() => {
     const saved = localStorage.getItem('ot_records');
     return saved ? JSON.parse(saved) : [];
@@ -29,7 +39,7 @@ export default function App() {
     const saved = localStorage.getItem('ot_employees');
     return saved ? JSON.parse(saved) : MOCK_EMPLOYEES;
   });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
 
   useEffect(() => {
     localStorage.setItem('ot_records', JSON.stringify(records));
@@ -38,6 +48,24 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ot_employees', JSON.stringify(employees));
   }, [employees]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('ot_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('ot_user');
+    }
+  }, [user]);
+
+  const handleLogin = (username: string, role: 'admin' | 'user') => {
+    setUser({ username, role });
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  const canDelete = user?.role === 'admin';
 
   const addRecord = (newRecord: Omit<OTRecord, 'id' | 'createdAt'>) => {
     const record: OTRecord = {
@@ -70,31 +98,36 @@ export default function App() {
   };
 
   const deleteRecord = (id: string) => {
+    if (!canDelete) return;
     setRecords(prev => prev.filter(r => r.id !== id));
   };
 
   const deleteRecords = (ids: string[]) => {
+    if (!canDelete) return;
     setRecords(prev => prev.filter(r => !ids.includes(r.id)));
   };
 
   const clearAllRecords = () => {
+    if (!canDelete) return;
     setRecords([]);
   };
 
   const navItems = [
-    { id: 'registration' as Tab, label: 'Đăng ký tăng ca', icon: Clock, info: 'Nhập thông tin OT hàng ngày' },
-    { id: 'list' as Tab, label: 'Danh sách tăng ca', icon: List, info: 'Xem & xuất báo cáo Excel' },
-    { id: 'history' as Tab, label: 'Lịch sử tăng ca', icon: Calendar, info: 'Lịch sử toàn bộ dữ liệu' },
-    { id: 'alerts' as Tab, label: 'Danh sách vượt ngưỡng', icon: AlertTriangle, info: 'Cảnh báo 12h/40h/300h' },
+    { id: 'registration' as Tab, label: 'Đăng ký', icon: Clock, info: 'Nhập thông tin OT hàng ngày' },
+    { id: 'list' as Tab, label: 'Danh sách', icon: List, info: 'Xem & xuất báo cáo Excel' },
+    { id: 'history' as Tab, label: 'Lịch sử', icon: Calendar, info: 'Lịch sử toàn bộ dữ liệu' },
+    { id: 'alerts' as Tab, label: 'Cảnh báo', icon: AlertTriangle, info: 'Cảnh báo 12h/40h/300h' },
   ];
 
-  const exceededCount = records.filter(r => r.hours > 8).length; // Just a dummy badge logic for demo
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden">
-      {/* Sidebar Navigation */}
+    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-hidden relative">
+      {/* Sidebar Navigation - Desktop */}
       <aside className={cn(
-        "bg-slate-900 text-white h-screen sticky top-0 transition-all duration-300 flex flex-col z-50",
+        "bg-slate-900 text-white h-screen sticky top-0 transition-all duration-300 hidden lg:flex flex-col z-50",
         isSidebarOpen ? "w-72" : "w-16"
       )}>
         <div className="p-6 flex items-center justify-between h-16">
@@ -135,93 +168,122 @@ export default function App() {
                    {records.length > 0 ? "!" : "0"}
                  </span>
               )}
-              {!isSidebarOpen && (
-                <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-xs opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50 border border-slate-700 shadow-xl rounded-md">
-                  {item.label}
-                </div>
-              )}
             </button>
           ))}
         </nav>
 
-        <div className="p-6 border-t border-slate-800">
-          <div className={cn("flex items-center gap-3 transition-opacity duration-300", !isSidebarOpen && "opacity-0")}>
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold">AD</div>
-            <div className="text-xs overflow-hidden">
-              <p className="font-medium whitespace-nowrap">Admin User</p>
-              <p className="text-slate-400 whitespace-nowrap">Quản lý nhân sự</p>
+        <div className="p-4 border-t border-slate-800">
+          <div className={cn("flex items-center justify-between gap-3 transition-opacity duration-300", !isSidebarOpen && "opacity-0 invisible")}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold uppercase">
+                {user.username.substring(0, 2)}
+              </div>
+              <div className="text-xs overflow-hidden">
+                <p className="font-medium whitespace-nowrap">{user.username}</p>
+                <p className="text-slate-400 whitespace-nowrap uppercase text-[10px]">{user.role}</p>
+              </div>
             </div>
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+              title="Đăng xuất"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40">
-          <h1 className="text-lg font-semibold text-slate-800 uppercase tracking-tight">
-            {navItems.find(n => n.id === activeTab)?.label}
-          </h1>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 text-xs font-semibold bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
-              Hướng dẫn (PDF)
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="h-16 bg-white border-b border-slate-200 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-8 h-8 bg-indigo-600 rounded flex lg:hidden items-center justify-center"
+            )}>
+              <Clock className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-sm lg:text-lg font-bold text-slate-800 uppercase tracking-tight truncate max-w-[200px]">
+              {navItems.find(n => n.id === activeTab)?.label}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-3">
+            <button 
+              onClick={handleLogout}
+              className="lg:hidden p-2 text-slate-500"
+            >
+              <LogOut className="w-5 h-5" />
             </button>
-            <div className="px-4 py-2 text-xs font-semibold bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-600 shadow-sm">
-              Status: Connected
+            <div className="hidden sm:block px-3 py-1.5 text-[10px] lg:text-xs font-bold bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-600 shadow-sm uppercase">
+              {user.role}
             </div>
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl w-full mx-auto space-y-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              {activeTab === 'registration' && (
-                <Registration 
-                  onAddRecord={addRecord} 
-                  records={records} 
-                  employees={employees}
-                  setEmployees={setEmployees}
-                />
-              )}
-              {activeTab === 'list' && (
-                <OTList 
-                  records={records} 
-                  employees={employees} 
-                  onUpdateRecord={updateRecord}
-                  onDeleteRecord={deleteRecord}
-                />
-              )}
-              {activeTab === 'history' && (
-                <HistoryList 
-                  records={records} 
-                  employees={employees}
-                  onAddRecords={addRecords}
-                  onDeleteRecords={deleteRecords}
-                  onClearAll={clearAllRecords}
-                />
-              )}
-              {activeTab === 'alerts' && (
-                <AlertList records={records} employees={employees} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+          <div className="max-w-7xl w-full mx-auto space-y-6 pb-24 lg:pb-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.15 }}
+              >
+                {activeTab === 'registration' && (
+                  <Registration 
+                    onAddRecord={addRecord} 
+                    records={records} 
+                    employees={employees}
+                    setEmployees={setEmployees}
+                  />
+                )}
+                {activeTab === 'list' && (
+                  <OTList 
+                    records={records} 
+                    employees={employees} 
+                    onUpdateRecord={updateRecord}
+                    onDeleteRecord={deleteRecord}
+                    canDelete={canDelete}
+                  />
+                )}
+                {activeTab === 'history' && (
+                  <HistoryList 
+                    records={records} 
+                    employees={employees}
+                    onAddRecords={addRecords}
+                    onDeleteRecords={deleteRecords}
+                    onClearAll={clearAllRecords}
+                    canDelete={canDelete}
+                  />
+                )}
+                {activeTab === 'alerts' && (
+                  <AlertList records={records} employees={employees} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
-        <footer className="mt-auto p-8 bg-white border-t border-slate-200 flex justify-between items-center text-slate-400">
-          <div className="text-[10px] font-mono space-y-1 uppercase tracking-widest">
-             <div>Build: Prod_V1.1</div>
-             <div>Region: Asia_Pacific</div>
-          </div>
-          <div className="text-[10px] font-medium text-right max-w-xs">
-            Hệ thống quản lý tuân thủ quy định lao động quốc tế 
-            được thiết kế cho môi trường chuyên nghiệp.
-          </div>
-        </footer>
+        {/* Mobile Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-slate-200 px-2 py-2 flex items-center justify-around z-50 pb-safe shadow-2xl">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
+                activeTab === item.id ? "text-indigo-600" : "text-slate-400"
+              )}
+            >
+              <item.icon className={cn("w-6 h-6", activeTab === item.id ? "fill-indigo-50" : "")} />
+              <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+              {item.id === 'alerts' && records.length > 0 && (
+                <div className="absolute top-1 ml-4 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </button>
+          ))}
+        </nav>
       </main>
     </div>
   );

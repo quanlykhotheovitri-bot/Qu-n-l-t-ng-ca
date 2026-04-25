@@ -12,9 +12,10 @@ interface HistoryListProps {
   onAddRecords: (records: Omit<OTRecord, 'id' | 'createdAt'>[], newEmployees?: Employee[]) => void;
   onDeleteRecords: (ids: string[]) => void;
   onClearAll: () => void;
+  canDelete?: boolean;
 }
 
-export default function HistoryList({ records, employees, onAddRecords, onDeleteRecords, onClearAll }: HistoryListProps) {
+export default function HistoryList({ records, employees, onAddRecords, onDeleteRecords, onClearAll, canDelete = true }: HistoryListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -173,6 +174,7 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
   };
 
   const handleDeleteSelected = () => {
+    if (!canDelete) return;
     if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} bản ghi đã chọn?`)) {
       onDeleteRecords(selectedIds);
       setSelectedIds([]);
@@ -180,6 +182,7 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
   };
 
   const handleClearAll = () => {
+    if (!canDelete) return;
     if (window.confirm("CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử tăng ca không? Hành động này không thể hoàn tác.")) {
       onClearAll();
       setSelectedIds([]);
@@ -187,34 +190,36 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Search and Action Bar */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="relative flex-1 min-w-[300px]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo tên, mã NV, bộ phận..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              placeholder="Tìm kiếm theo tên, mã NV..."
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all h-[42px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleClearAll}
-              className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition-all"
-            >
-              <AlertCircle className="w-4 h-4" />
-              Xóa tất cả
-            </button>
+          <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+            {canDelete && (
+              <button
+                onClick={handleClearAll}
+                className="flex-1 lg:flex-none px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] lg:text-xs font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all uppercase tracking-wide h-[42px]"
+              >
+                <AlertCircle className="w-4 h-4" />
+                Dọn sạch
+              </button>
+            )}
             <button
               onClick={downloadTemplate}
-              className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
+              className="flex-1 lg:flex-none px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-[10px] lg:text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all shadow-sm uppercase tracking-wide h-[42px]"
             >
               <Download className="w-4 h-4" />
-              Tải file mẫu
+              Mẫu Excel
             </button>
             <input
               type="file"
@@ -226,49 +231,49 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50"
+              className="w-full lg:w-auto px-6 py-2 bg-indigo-600 text-white rounded-xl text-[10px] lg:text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 uppercase tracking-wide h-[42px]"
             >
               <Upload className="w-4 h-4" />
-              {isUploading ? 'Đang tải...' : 'Tải lên Excel'}
+              {isUploading ? 'Đang tải...' : 'Nhập Excel'}
             </button>
           </div>
         </div>
 
-        {selectedIds.length > 0 && (
+        {selectedIds.length > 0 && canDelete && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between px-6 py-3 bg-indigo-50 border border-indigo-100 rounded-xl shadow-sm"
+            className="flex items-center justify-between px-4 lg:px-6 py-3 bg-indigo-50 border border-indigo-100 rounded-xl shadow-sm"
           >
             <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-indigo-700">
-                Đang chọn: {selectedIds.length} bản ghi
+              <span className="text-xs font-bold text-indigo-700">
+                Chọn: {selectedIds.length} bản ghi
               </span>
               <button
                 onClick={() => setSelectedIds([])}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-700 underline"
+                className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider"
               >
-                Bỏ chọn
+                Bỏ
               </button>
             </div>
             <button
               onClick={handleDeleteSelected}
-              className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-all shadow-md shadow-red-200"
+              className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-bold hover:bg-red-700 transition-all shadow-md shadow-red-200 uppercase tracking-widest"
             >
               <AlertCircle className="w-3.5 h-3.5" />
-              Xóa mục đã chọn
+              Xóa
             </button>
           </motion.div>
         )}
       </div>
 
       {/* Main History Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden shadow-slate-200/50">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto selection:bg-indigo-100">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200">
-                <th className="px-4 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center w-12">
+                <th className="px-4 py-4 border-r border-slate-100 text-center w-12">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -276,44 +281,21 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center w-16">
-                  <div>Stt</div>
-                  <div className="text-indigo-400 font-medium">No</div>
-                </th>
-                <th className="px-4 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center w-28">
-                  <div>MNV</div>
-                  <div className="text-indigo-400 font-medium">ID</div>
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-800 border-r border-slate-200">
-                  <div>Họ và tên</div>
-                  <div className="text-indigo-400 font-medium">Full Name</div>
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-800 border-r border-slate-200">
-                  <div>Bộ phận</div>
-                  <div className="text-indigo-400 font-medium">Department</div>
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-800 border-r border-slate-200">
-                  <div>Chức vụ</div>
-                  <div className="text-indigo-400 font-medium">Job Title</div>
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-800 border-r border-slate-200 text-center">
-                  <div>Ngày tăng ca</div>
-                  <div className="text-indigo-400 font-medium">Date</div>
-                </th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-800 text-center">
-                  <div>Số giờ tăng ca</div>
-                  <div className="text-indigo-400 font-medium">Hour OT</div>
-                </th>
+                <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-16">STT</th>
+                <th className="px-4 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center w-28">MNV</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Họ và tên</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 text-center">Ngày</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Số giờ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-sm italic">
               {filteredHistory.length > 0 ? (
                 filteredHistory.map((r, i) => {
                   const emp = employees.find(e => e.id === r.employeeId) || {
                     name: r.employeeName,
                     employeeCode: r.employeeCode,
-                    department: r.department,
-                    jobTitle: r.jobTitle
+                    department: r.department
                   };
                   return (
                     <tr key={r.id} className={cn(
@@ -328,21 +310,20 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
                           onChange={() => toggleSelect(r.id)}
                         />
                       </td>
-                      <td className="px-4 py-3 text-center text-slate-500 font-medium border-r border-slate-100 italic">{i + 1}</td>
+                      <td className="px-4 py-3 text-center text-slate-300 font-mono text-xs border-r border-slate-100">#{i + 1}</td>
                       <td className="px-4 py-3 text-center border-r border-slate-100">
-                        <span className="font-mono text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                        <span className="font-mono text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">
                           {emp?.employeeCode}
                         </span>
                       </td>
-                      <td className="px-6 py-3 font-semibold text-slate-700 border-r border-slate-100 uppercase text-xs">{emp?.name}</td>
-                      <td className="px-6 py-3 text-sm text-slate-600 border-r border-slate-100 font-medium">{emp?.department}</td>
-                      <td className="px-6 py-3 text-xs text-slate-500 border-r border-slate-100 italic">{emp?.jobTitle || 'N/A'}</td>
-                      <td className="px-6 py-3 text-center text-slate-600 border-r border-slate-100 text-xs">
+                      <td className="px-6 py-3 font-bold text-slate-800 border-r border-slate-100 uppercase text-xs tracking-tighter">{emp?.name}</td>
+                      <td className="px-6 py-3 text-xs text-slate-600 border-r border-slate-100 italic">{emp?.department}</td>
+                      <td className="px-6 py-3 text-center text-slate-500 border-r border-slate-100 text-xs font-mono">
                         {format(parseISO(r.date), 'dd/MM/yyyy')}
                       </td>
                       <td className="px-6 py-3 text-center">
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 text-slate-800 font-bold text-sm border-2 border-slate-100">
-                          {r.hours}
+                        <span className="font-bold text-slate-800 text-xs">
+                          {r.hours}h
                         </span>
                       </td>
                     </tr>
@@ -350,9 +331,9 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-20 text-center text-slate-300">
-                    <FileSpreadsheet className="w-16 h-16 mx-auto mb-4 opacity-10" />
-                    <p className="text-sm font-medium italic">Không có lịch sử tăng ca nào được tìm thấy</p>
+                  <td colSpan={7} className="py-20 text-center text-slate-300 italic">
+                    <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    Không có dữ liệu lịch sử
                   </td>
                 </tr>
               )}
@@ -361,22 +342,22 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
         </div>
       </div>
       
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng cộng bản ghi</p>
-          <div className="text-3xl font-black text-slate-800">{filteredHistory.length}</div>
+      {/* Stats Summary - Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="bg-white p-4 lg:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng bản ghi</p>
+          <div className="text-xl lg:text-3xl font-black text-slate-800">{filteredHistory.length}</div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng giờ tăng ca</p>
-          <div className="text-3xl font-black text-indigo-600">
+        <div className="bg-white p-4 lg:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng số giờ</p>
+          <div className="text-xl lg:text-3xl font-black text-indigo-600">
             {filteredHistory.reduce((acc, curr) => acc + curr.hours, 0).toFixed(1)}h
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-amber-400">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Lưu ý nhập liệu</p>
-          <div className="text-xs text-slate-500 leading-relaxed italic">
-            File Excel cần có các cột theo thứ tự: Stt, MNV, Họ tên, Bộ phận, Chức vụ, Ngày, Số giờ.
+        <div className="hidden lg:block bg-white p-4 lg:p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-400">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Lưu ý</p>
+          <div className="text-[10px] text-slate-500 leading-relaxed italic">
+            File Excel cần có các cột: Stt, MNV, Họ tên, Bộ phận, Chức vụ, Ngày, Số giờ.
           </div>
         </div>
       </div>

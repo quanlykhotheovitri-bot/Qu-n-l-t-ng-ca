@@ -13,11 +13,12 @@ interface OTListProps {
   employees: Employee[];
   onUpdateRecord: (id: string, updatedFields: Partial<OTRecord>) => void;
   onDeleteRecord: (id: string) => void;
+  canDelete?: boolean;
 }
 
 type Period = 'day' | 'week' | 'month' | 'year';
 
-export default function OTList({ records, employees, onUpdateRecord, onDeleteRecord }: OTListProps) {
+export default function OTList({ records, employees, onUpdateRecord, onDeleteRecord, canDelete = true }: OTListProps) {
   const [period, setPeriod] = useState<Period>('month');
   const [targetDate, setTargetDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
@@ -449,15 +450,15 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-wrap items-end gap-6">
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chế độ xem</label>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 lg:p-6 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-end gap-4 lg:gap-6">
+        <div className="flex-1 min-w-0 lg:min-w-[200px]">
+          <label className="block text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 lg:mb-2 ml-1">Chế độ xem</label>
           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button
               onClick={() => setViewMode('summary')}
               className={cn(
-                "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all",
+                "flex-1 py-1.5 lg:py-2 text-[10px] lg:text-xs font-bold rounded-lg transition-all uppercase tracking-tighter",
                 viewMode === 'summary' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
@@ -466,7 +467,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
             <button
               onClick={() => setViewMode('detailed')}
               className={cn(
-                "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all",
+                "flex-1 py-1.5 lg:py-2 text-[10px] lg:text-xs font-bold rounded-lg transition-all uppercase tracking-tighter",
                 viewMode === 'detailed' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
               )}
             >
@@ -475,15 +476,15 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
           </div>
         </div>
 
-        <div className="flex-1 min-w-[240px]">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chu kỳ báo cáo</label>
+        <div className="flex-1 min-w-0 lg:min-w-[240px]">
+          <label className="block text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 lg:mb-2 ml-1">Chu kỳ báo cáo</label>
           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
             {(['day', 'week', 'month', 'year'] as Period[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all capitalize",
+                  "flex-1 py-1.5 lg:py-2 text-[8px] lg:text-[10px] font-bold rounded-lg transition-all uppercase tracking-tighter",
                   period === p ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                 )}
               >
@@ -493,17 +494,17 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mốc thời gian</label>
+        <div className="flex-1 min-w-0">
+          <label className="block text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 lg:mb-2 ml-1">Mốc thời gian</label>
           <div className="space-y-1">
             <input
               type="date"
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-sans"
+              className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-sans h-[42px]"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
             />
             {period === 'month' && (
-              <p className="text-[10px] text-indigo-500 font-bold italic">
+              <p className="text-[9px] lg:text-[10px] text-indigo-500 font-bold italic text-center lg:text-left">
                 Chu kỳ: {format(getCycleIntervalForDate(parseISO(targetDate)).start, 'dd/MM')} - {format(getCycleIntervalForDate(parseISO(targetDate)).end, 'dd/MM')}
               </p>
             )}
@@ -513,10 +514,10 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
         <button
           onClick={exportExcel}
           disabled={filteredRecords.length === 0}
-          className="bg-indigo-50 text-indigo-600 border border-indigo-200 px-6 py-2 rounded-lg flex items-center gap-2 font-bold text-sm hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          className="lg:w-auto h-[42px] px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-wide disabled:opacity-50"
         >
           <Download className="w-4 h-4" />
-          Xuất Excel (.xlsx)
+          Xuất Excel
         </button>
       </div>
 
@@ -529,53 +530,54 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
             {viewMode === 'summary' ? `Tính đến ngày ${format(parseISO(targetDate), 'dd/MM/yyyy')}` : ''}
           </span>
         </div>
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-x-auto selection:bg-indigo-100 flex-1">
           {viewMode === 'summary' ? (
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nhân viên</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bộ phận</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Tuần</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Tháng</th>
-                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Năm</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200">
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">Tuần</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30 border-r border-slate-100">Tháng</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-indigo-600 uppercase tracking-widest text-center bg-indigo-50/30">Năm</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {summaryData.length > 0 ? summaryData.map((s, i) => (
                   <tr key={s.employee.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 text-slate-400 font-medium">#{i + 1}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
+                    <td className="px-6 py-4 border-r border-slate-100">
                       <div className="font-bold text-slate-800 uppercase leading-none mb-1">{s.employee.name}</div>
-                      <div className="text-[10px] font-semibold text-indigo-500 font-mono">{s.employee.employeeCode}</div>
+                      <div className="text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{s.employee.employeeCode}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">{s.employee.department}</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.week}h</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.month}h</td>
-                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.year}h</td>
+                    <td className="px-6 py-4 text-slate-600 font-medium border-r border-slate-100 italic">{s.employee.department}</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100">{s.week}h</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10 border-r border-slate-100">{s.month}h</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/10">{s.year}h</td>
                   </tr>
                 )) : (
                   <tr>
                     <td colSpan={6} className="p-20 text-center text-slate-300 italic">
-                      Không có dữ liệu tổng hợp
+                      <List className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                      Không có dữ liệu tổng hợp trong chu kỳ này
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           ) : (
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nhân viên</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bộ phận</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ngày</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Số giờ</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Thời gian</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lý do</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Thao tác</th>
+              <tr className="bg-slate-50/80 border-b border-slate-200">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100 w-16">STT</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Nhân viên</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Bộ phận</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Ngày</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Số giờ</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center border-r border-slate-100">Thời gian</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-r border-slate-100">Lý do</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
@@ -588,88 +590,86 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                 const isEditing = editingId === r.id;
 
                 return (
-                  <tr key={r.id} className={cn("hover:bg-slate-50 group transition-colors", isEditing && "bg-indigo-50 hover:bg-indigo-50")}>
-                    <td className="px-6 py-4 text-slate-400 font-medium">#{i + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-800 uppercase leading-none mb-1">{emp?.name || 'Unknown'}</div>
-                      <div className="text-[10px] font-semibold text-indigo-500 font-mono tracking-tighter">{emp?.employeeCode}</div>
+                  <tr key={r.id} className={cn("hover:bg-slate-50 group transition-colors", isEditing && "bg-indigo-50/50")}>
+                    <td className="px-6 py-4 text-slate-300 font-mono italic text-xs border-r border-slate-100">#{String(i + 1).padStart(2, '0')}</td>
+                    <td className="px-6 py-4 border-r border-slate-100">
+                      <div className="font-bold text-slate-800 uppercase leading-none mb-1">{emp?.name}</div>
+                      <div className="text-[10px] font-bold text-indigo-500 font-mono bg-indigo-50 inline-block px-1.5 rounded">{emp?.employeeCode}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">{emp?.department}</td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-slate-500 border-r border-slate-100">{emp?.department}</td>
+                    <td className="px-6 py-4 text-slate-600 border-r border-slate-100 font-medium">
                       {isEditing ? (
                         <input 
                           type="date" 
-                          className="px-2 py-1 border rounded text-xs"
+                          className="px-2 py-1 border border-slate-200 rounded text-xs outline-none focus:border-indigo-500"
                           value={editValues.date}
                           onChange={(e) => handleEditChange('date', e.target.value)}
                         />
                       ) : format(parseISO(r.date), 'dd/MM/yyyy')}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-sm">
+                    <td className="px-6 py-4 text-center border-r border-slate-100">
+                      <span className="px-2 py-1 bg-indigo-100 text-indigo-600 rounded font-bold text-xs">
                         {isEditing ? editValues.hours : r.hours}h
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center border-r border-slate-100">
                       {isEditing ? (
                         <div className="flex items-center gap-1">
                           <input 
                             type="time" 
-                            className="bg-white border rounded px-1 py-0.5 text-[10px]"
+                            className="bg-white border border-slate-200 rounded px-1 py-1 text-[10px] outline-none"
                             value={editValues.startTime}
                             onChange={(e) => handleEditChange('startTime', e.target.value)}
                           />
-                          <span>-</span>
+                          <span className="text-slate-300">-</span>
                           <input 
                             type="time" 
-                            className="bg-white border rounded px-1 py-0.5 text-[10px]"
+                            className="bg-white border border-slate-200 rounded px-1 py-1 text-[10px] outline-none"
                             value={editValues.endTime}
                             onChange={(e) => handleEditChange('endTime', e.target.value)}
                           />
                         </div>
                       ) : (
-                        <div className="text-[10px] font-bold text-slate-500">{r.startTime} - {r.endTime}</div>
+                        <div className="text-[10px] font-bold text-slate-500 lowercase bg-slate-100 px-2 py-0.5 rounded-full inline-block">{r.startTime} - {r.endTime}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500 italic max-w-xs truncate">
+                    <td className="px-6 py-4 text-xs text-slate-400 italic max-w-xs truncate border-r border-slate-100">
                       {isEditing ? (
                         <textarea 
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full px-2 py-1 border border-slate-200 rounded text-xs outline-none focus:border-indigo-500"
                           value={editValues.reason}
                           onChange={(e) => handleEditChange('reason', e.target.value)}
                         />
-                      ) : (r.reason || 'Không có ghi chú')}
+                      ) : (r.reason || '...')}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 px-2">
+                      <div className="flex items-center justify-end gap-1">
                         {isEditing ? (
                           <>
                             <button 
                               onClick={handleEditSave}
-                              className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors shadow-sm"
-                              title="Lưu"
+                              className="p-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
                             >
-                              <Save className="w-4 h-4" />
+                              <Save className="w-3.5 h-3.5" />
                             </button>
                             <button 
                               onClick={handleEditCancel}
-                              className="p-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors shadow-sm"
-                              title="Hủy"
+                              className="p-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3.5 h-3.5" />
                             </button>
                           </>
                         ) : deletingId === r.id ? (
-                          <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                          <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
                             <button 
                               onClick={() => { onDeleteRecord(r.id); setDeletingId(null); }}
-                              className="px-2 py-1 bg-red-500 text-white text-[10px] font-bold rounded hover:bg-red-600 transition-colors"
+                              className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700"
                             >
                               Xóa
                             </button>
                             <button 
                               onClick={() => setDeletingId(null)}
-                              className="px-2 py-1 bg-slate-200 text-slate-600 text-[10px] font-bold rounded hover:bg-slate-300 transition-colors"
+                              className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded"
                             >
                               Hủy
                             </button>
@@ -678,18 +678,18 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                           <>
                             <button 
                               onClick={() => handleEditStart(r)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                              title="Chỉnh sửa"
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button 
-                              onClick={() => setDeletingId(r.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                              title="Xóa"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {canDelete && (
+                              <button 
+                                onClick={() => setDeletingId(r.id)}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -699,8 +699,8 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
               }) : (
                 <tr>
                   <td colSpan={8} className="p-20 text-center text-slate-300 italic">
-                    <List className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    Không tìm thấy dữ liệu cho khoảng thời gian này
+                    <List className="w-12 h-12 mx-auto mb-4 opacity-10" />
+                    Không tìm thấy dữ liệu phù hợp
                   </td>
                 </tr>
               )}

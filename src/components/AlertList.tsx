@@ -107,24 +107,24 @@ export default function AlertList({ records, employees }: AlertListProps) {
   }, [records]);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-red-50 border border-red-100 rounded-xl p-6 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
-            <AlertCircle className="w-6 h-6" />
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-red-50 border border-red-100 rounded-xl p-4 lg:p-6 flex flex-col lg:flex-row lg:justify-between lg:items-center shadow-sm gap-4">
+        <div className="flex items-center gap-3 lg:gap-4">
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 flex-shrink-0">
+            <AlertCircle className="w-5 lg:w-6 h-5 lg:h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-red-700 text-sm flex items-center gap-2 uppercase tracking-wide">
+            <h3 className="font-bold text-red-700 text-xs lg:text-sm flex items-center gap-2 uppercase tracking-wide">
               Cảnh báo vượt ngưỡng
             </h3>
-            <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest mt-0.5 opacity-80">
-              Hệ thống theo dõi tự động: 12h/W • 40h/M • 300h/Y
+            <p className="text-red-500 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest mt-0.5 opacity-80">
+              Ngưỡng quy định: 12h/W • 40h/M • 300h/Y
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-6 pb-12">
         {alerts.length > 0 ? alerts.map((alert) => (
           <div 
             key={alert.employee.id} 
@@ -133,26 +133,26 @@ export default function AlertList({ records, employees }: AlertListProps) {
               (alert.isWeekExceeded || alert.isMonthExceeded || alert.isYearExceeded) ? "border-red-200" : "border-slate-200"
             )}
           >
-            <div className="p-5 flex gap-4 border-b border-slate-100 bg-slate-50/30">
-              <div className="w-12 h-12 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-400">
-                <User className="w-6 h-6" />
+            <div className="p-4 lg:p-5 flex gap-3 lg:gap-4 border-b border-slate-100 bg-slate-50/30">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-400 flex-shrink-0">
+                <User className="w-5 lg:w-6 h-5 lg:h-6" />
               </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <div className="font-bold text-slate-800 text-lg leading-tight uppercase">
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="font-bold text-slate-800 text-sm lg:text-lg leading-tight uppercase truncate">
                     {alert.employee.name}
                   </div>
-                  <span className="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded font-bold font-mono tracking-tighter">
+                  <span className="bg-slate-800 text-white text-[8px] lg:text-[10px] px-1.5 py-0.5 rounded font-bold font-mono tracking-tighter whitespace-nowrap">
                     {alert.employee.employeeCode}
                   </span>
                 </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                <div className="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate">
                   {alert.employee.department}
                 </div>
               </div>
             </div>
 
-            <div className="p-5 grid grid-cols-3 gap-4">
+            <div className="p-4 lg:p-5 grid grid-cols-3 gap-2 lg:gap-4">
               <AlertStatBox 
                 label="Tuần" 
                 value={alert.weekHours} 
@@ -206,17 +206,17 @@ function AlertStatBox({ label, value, limit, isExceeded, isWarning }: {
 }) {
   return (
     <div className={cn(
-      "p-3 rounded-lg flex flex-col items-center justify-center transition-all border",
+      "p-2 lg:p-3 rounded-lg flex flex-col items-center justify-center transition-all border",
       isExceeded 
         ? "bg-red-600 text-white border-red-700 shadow-lg shadow-red-200" 
         : isWarning 
           ? "bg-orange-100 text-orange-700 border-orange-200" 
           : "bg-slate-50 text-slate-400 border-slate-100"
     )}>
-      <span className={cn("text-[9px] font-black uppercase mb-1 opacity-70")}>{label}</span>
-      <div className="font-black text-xl leading-none">{value}h</div>
+      <span className={cn("text-[8px] lg:text-[9px] font-black uppercase mb-1 opacity-70")}>{label}</span>
+      <div className="font-black text-sm lg:text-xl leading-none">{value}h</div>
       <div className={cn(
-        "text-[8px] mt-2 font-bold uppercase tracking-tighter opacity-70",
+        "text-[7px] lg:text-[8px] mt-1.5 lg:mt-2 font-bold uppercase tracking-tighter opacity-70",
         isExceeded ? "text-white" : ""
       )}>
         Limit: {limit}h

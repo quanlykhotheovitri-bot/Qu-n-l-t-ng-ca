@@ -3,7 +3,7 @@ import { Download, Filter, Calendar, List, Edit2, Trash2, Save, X } from 'lucide
 import { OTRecord, Employee } from '../types';
 import { MOCK_EMPLOYEES } from '../constants';
 import { cn } from '../lib/utils';
-import { format, parseISO, isSameDay, isSameWeek, isSameYear } from 'date-fns';
+import { format, parseISO, isSameDay, isSameWeek, isSameYear, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { isSameCycleMonth, getCycleIntervalForDate } from '../lib/dateUtils';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -18,8 +18,9 @@ interface OTListProps {
 type Period = 'day' | 'week' | 'month' | 'year';
 
 export default function OTList({ records, employees, onUpdateRecord, onDeleteRecord }: OTListProps) {
-  const [period, setPeriod] = useState<Period>('day');
+  const [period, setPeriod] = useState<Period>('month');
   const [targetDate, setTargetDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<OTRecord>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -37,6 +38,43 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
       }
     }).sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
   }, [records, period, targetDate]);
+
+  const summaryData = useMemo(() => {
+    const target = parseISO(targetDate);
+    const weekStart = startOfWeek(target, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(target, { weekStartsOn: 1 });
+    const cycleInterval = getCycleIntervalForDate(target);
+    const yearStart = startOfYear(target);
+    const yearEnd = endOfYear(target);
+
+    const summaryMap: Record<string, { employee: Employee; week: number; month: number; year: number }> = {};
+
+    employees.forEach(emp => {
+      summaryMap[emp.id] = { employee: emp, week: 0, month: 0, year: 0 };
+    });
+
+    records.forEach(r => {
+      const recordDate = parseISO(r.date);
+      const empId = r.employeeId;
+      
+      if (!summaryMap[empId]) return;
+
+      // Year total
+      if (recordDate >= yearStart && recordDate <= yearEnd) {
+        summaryMap[empId].year += r.hours;
+      }
+      // Month total (Cycle)
+      if (recordDate >= cycleInterval.start && recordDate <= cycleInterval.end) {
+        summaryMap[empId].month += r.hours;
+      }
+      // Week total
+      if (recordDate >= weekStart && recordDate <= weekEnd) {
+        summaryMap[empId].week += r.hours;
+      }
+    });
+
+    return Object.values(summaryMap).filter(s => s.week > 0 || s.month > 0 || s.year > 0);
+  }, [records, employees, targetDate]);
 
   const handleEditStart = (record: OTRecord) => {
     setEditingId(record.id);
@@ -79,26 +117,60 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
 
   const exportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    // ... existing export code ...
-    const worksheet = workbook.addWorksheet('BM tăng ca tự nguyện');
+    const worksheet = workbook.addWorksheet(viewMode === 'summary' ? 'Báo cáo tổng kết' : 'BM tăng ca tự nguyện');
 
     const target = parseISO(targetDate);
     const dayStr = format(target, 'dd');
     const monthStr = format(target, 'MM');
     const yearStr = format(target, 'yyyy');
 
-    // Define column widths - matching the visual proportions
+    if (viewMode === 'summary') {
+      worksheet.columns = [
+        { header: 'Stt', key: 'stt', width: 6 },
+        { header: 'MNV', key: 'mnv', width: 15 },
+        { header: 'Họ và tên', key: 'name', width: 30 },
+        { header: 'Bộ phận', key: 'dept', width: 20 },
+        { header: 'Tổng Tuần (h)', key: 'week', width: 15 },
+        { header: 'Tổng Tháng (h)', key: 'month', width: 15 },
+        { header: 'Tổng Năm (h)', key: 'year', width: 15 },
+      ];
+
+      summaryData.forEach((s, i) => {
+        worksheet.addRow({
+          stt: i + 1,
+          mnv: s.employee.employeeCode,
+          name: s.employee.name,
+          dept: s.employee.department,
+          week: s.week,
+          month: s.month,
+          year: s.year,
+        });
+      });
+
+      // Simple styling for summary
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).alignment = { horizontal: 'center' };
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(new Blob([buffer]), `Bao_cao_tong_hop_OT_${targetDate}.xlsx`);
+      return; // Exit early for summary mode
+    }
+
+    // Detailed export (existing code logic)
     worksheet.columns = [
-      { key: 'stt', width: 4.5 },   // A
-      { key: 'mnv', width: 10 },    // B
-      { key: 'name', width: 33 },   // C
-      { key: 'dept', width: 15 },   // D
-      { key: 'job', width: 15 },    // E
-      { key: 'from', width: 9 },    // F
-      { key: 'to', width: 9 },      // G
-      { key: 'sign', width: 16 },   // H
-      { key: 'note', width: 22 },   // I
-    ];
+        { key: 'stt', width: 4.5 },
+        { key: 'mnv', width: 10 },
+        { key: 'name', width: 33 },
+        { key: 'dept', width: 15 },
+        { key: 'job', width: 15 },
+        { key: 'from', width: 9 },
+        { key: 'to', width: 9 },
+        { key: 'sign', width: 16 },
+        { key: 'note', width: 22 },
+      ];
+      // (Simplified export logic for brevity or keep current logic)
+      // For now, let's keep the formatted export for detailed view.
+      // [Previous complex title/logo rows would go here if restored]
 
     // Row 1: Company Name & Form Code
     const row1 = worksheet.getRow(1);
@@ -379,6 +451,30 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-wrap items-end gap-6">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chế độ xem</label>
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setViewMode('summary')}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all",
+                viewMode === 'summary' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Tổng hợp
+            </button>
+            <button
+              onClick={() => setViewMode('detailed')}
+              className={cn(
+                "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all",
+                viewMode === 'detailed' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Chi tiết
+            </button>
+          </div>
+        </div>
+
         <div className="flex-1 min-w-[240px]">
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chu kỳ báo cáo</label>
           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
@@ -425,11 +521,51 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
-          <h3 className="font-bold text-slate-800 text-sm">Danh sách đăng ký gần đây</h3>
+        <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800 text-sm">
+            {viewMode === 'summary' ? 'Danh sách tổng hợp nhân viên' : 'Danh sách đăng ký gần đây'}
+          </h3>
+          <span className="text-[10px] text-slate-400 italic">
+            {viewMode === 'summary' ? `Tính đến ngày ${format(parseISO(targetDate), 'dd/MM/yyyy')}` : ''}
+          </span>
         </div>
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left">
+          {viewMode === 'summary' ? (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nhân viên</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bộ phận</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Tuần</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Tháng</th>
+                  <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center bg-indigo-50/50">Tổng Năm</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {summaryData.length > 0 ? summaryData.map((s, i) => (
+                  <tr key={s.employee.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-slate-400 font-medium">#{i + 1}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-slate-800 uppercase leading-none mb-1">{s.employee.name}</div>
+                      <div className="text-[10px] font-semibold text-indigo-500 font-mono">{s.employee.employeeCode}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-medium">{s.employee.department}</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.week}h</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.month}h</td>
+                    <td className="px-6 py-4 text-center font-bold text-indigo-600 bg-indigo-50/20">{s.year}h</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="p-20 text-center text-slate-300 italic">
+                      Không có dữ liệu tổng hợp
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
@@ -570,6 +706,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </div>

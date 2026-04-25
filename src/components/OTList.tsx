@@ -168,9 +168,6 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
         { key: 'sign', width: 16 },
         { key: 'note', width: 22 },
       ];
-      // (Simplified export logic for brevity or keep current logic)
-      // For now, let's keep the formatted export for detailed view.
-      // [Previous complex title/logo rows would go here if restored]
 
     // Row 1: Company Name & Form Code
     const row1 = worksheet.getRow(1);
@@ -483,7 +480,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={cn(
-                  "flex-1 py-1.5 lg:py-2 text-[8px] lg:text-[10px] font-bold rounded-lg transition-all uppercase tracking-tighter",
+                   "flex-1 py-1.5 lg:py-2 text-[8px] lg:text-[10px] font-bold rounded-lg transition-all uppercase tracking-tighter",
                   period === p ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                 )}
               >

@@ -146,7 +146,6 @@ export default function HistoryList({ records, employees, onAddRecords, onDelete
 
       if (newRecords.length > 0) {
         await onAddRecords(newRecords, newEmployeesFound);
-        // The success message is now handled by the parent component or happens after await
       } else {
         alert('Không tìm thấy dữ liệu hợp lệ trong file. Vui lòng kiểm tra lại định dạng file mẫu.');
       }

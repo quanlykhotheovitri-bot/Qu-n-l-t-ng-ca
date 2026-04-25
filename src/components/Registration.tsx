@@ -86,20 +86,11 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
     return statsMap;
   }, [employees, records]);
 
-  const stats = useMemo(() => {
-    if (selectedEmployees.length === 0) return null;
-    // Show stats for the last selected employee or first if needed, 
-    // but for multi-select we might just hide or show a summary.
-    // Let's show stats for the "last" one focused/added for now as a preview.
-    const employee = selectedEmployees[selectedEmployees.length - 1];
-    return {
-      name: employee.name,
-      code: employee.employeeCode,
-      weekHours: employeeStats[employee.id]?.week || 0,
-      monthHours: employeeStats[employee.id]?.month || 0,
-      yearHours: employeeStats[employee.id]?.year || 0
-    };
-  }, [selectedEmployees, employeeStats]);
+  const handleDeleteEmployee = (id: string) => {
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    setSelectedEmployees(prev => prev.filter(e => e.id !== id));
+    setDeletingId(null);
+  };
 
   const calculateHours = (start: string, end: string) => {
     try {
@@ -133,7 +124,6 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
     const duplicateNames: string[] = [];
 
     selectedEmployees.forEach(employee => {
-      // Check if duplicate on same day
       const isDuplicate = records.some(r => r.employeeId === employee.id && r.date === date);
       if (isDuplicate) {
         duplicateNames.push(employee.name);
@@ -180,12 +170,6 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
     setEmployees(prev => [employee, ...prev]);
     setNewEmp({ name: '', employeeCode: '', department: '', jobTitle: '' });
     setIsAddingEmployee(false);
-  };
-
-  const handleDeleteEmployee = (id: string) => {
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    setSelectedEmployees(prev => prev.filter(e => e.id !== id));
-    setDeletingId(null);
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,11 +243,18 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
 
   return (
     <div className="space-y-4 lg:space-y-6">
-      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6">
+      <div className="max-w-7xl mx-auto space-y-4 lg:space-y-6">
         {/* Search and Registration Section */}
-        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-6">
-            <h2 className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 lg:mb-4">Tìm kiếm & Đăng ký</h2>
+            <div className="flex items-center justify-between mb-3 lg:mb-4">
+              <h2 className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider">Tìm kiếm & Đăng ký</h2>
+              {selectedEmployees.length > 0 && (
+                <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full animate-in fade-in zoom-in-95">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Đã chọn: {selectedEmployees.length} NV</span>
+                </div>
+              )}
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -484,6 +475,20 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-100 sticky top-0 z-10">
+                    <th className="px-4 py-3 border-b border-slate-200 text-center w-12">
+                      <input 
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedEmployees(employees);
+                          } else {
+                            setSelectedEmployees([]);
+                          }
+                        }}
+                        checked={selectedEmployees.length === employees.length && employees.length > 0}
+                      />
+                    </th>
                     <th className="px-4 py-3 border-b border-slate-200 text-center w-12 text-[10px] font-bold text-slate-500 uppercase">STT</th>
                     <th className="px-4 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">MNV</th>
                     <th className="px-6 py-3 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase">Họ và tên</th>
@@ -495,183 +500,115 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {employees.map((emp, idx) => (
-                    <tr key={emp.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="px-4 py-3 text-center text-[10px] text-slate-300 font-mono italic">#{idx + 1}</td>
-                      <td className="px-4 py-3 font-mono text-xs font-bold text-indigo-500 italic bg-indigo-50/20">{emp.employeeCode}</td>
-                      <td className="px-6 py-3 font-bold text-slate-800 uppercase text-xs tracking-tighter">{emp.name}</td>
-                      <td className="px-6 py-3 text-xs text-slate-500 italic">{emp.department}</td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={cn(
-                          "text-[10px] font-bold px-2 py-0.5 rounded",
-                          (employeeStats[emp.id]?.week || 0) >= LIMITS.week ? "bg-red-100 text-red-600" : 
-                          (employeeStats[emp.id]?.week || 0) >= LIMITS.week * 0.8 ? "bg-orange-100 text-orange-600" : 
-                          "bg-slate-100 text-slate-700"
-                        )}>
-                          {employeeStats[emp.id]?.week || 0}h
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={cn(
-                          "text-[10px] font-bold px-2 py-0.5 rounded",
-                          (employeeStats[emp.id]?.month || 0) >= LIMITS.month ? "bg-red-100 text-red-600" : 
-                          (employeeStats[emp.id]?.month || 0) >= LIMITS.month * 0.8 ? "bg-orange-100 text-orange-600" : 
-                          "bg-slate-100 text-slate-700"
-                        )}>
-                          {employeeStats[emp.id]?.month || 0}h
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={cn(
-                          "text-[10px] font-bold px-2 py-0.5 rounded",
-                          (employeeStats[emp.id]?.year || 0) >= LIMITS.year ? "bg-red-100 text-red-600" : 
-                          (employeeStats[emp.id]?.year || 0) >= LIMITS.year * 0.8 ? "bg-orange-100 text-orange-600" : 
-                          "bg-slate-100 text-slate-700"
-                        )}>
-                          {employeeStats[emp.id]?.year || 0}h
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {deletingId === emp.id ? (
-                            <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
-                              <button 
-                                onClick={() => handleDeleteEmployee(emp.id)}
-                                className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700"
-                              >
-                                Xóa
-                              </button>
-                              <button 
-                                onClick={() => setDeletingId(null)}
-                                className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded"
-                              >
-                                Hủy
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <button 
-                                onClick={() => {
-                                  const isSelected = selectedEmployees.some(selected => selected.id === emp.id);
-                                  if (isSelected) {
-                                    setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id));
-                                  } else {
-                                    setSelectedEmployees(prev => [...prev, emp]);
-                                  }
-                                }}
-                                className={cn(
-                                  "text-[10px] font-bold py-1 px-3 rounded-lg transition-all uppercase tracking-widest border",
-                                  selectedEmployees.some(sel => sel.id === emp.id) 
-                                    ? "bg-indigo-600 text-white border-indigo-600" 
-                                    : "text-indigo-600 border-indigo-100 hover:bg-indigo-50"
-                                )}
-                              >
-                                {selectedEmployees.some(sel => sel.id === emp.id) ? 'Đã chọn' : 'Chọn'}
-                              </button>
-                              <button 
-                                onClick={() => setDeletingId(emp.id)}
-                                className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {employees.map((emp, idx) => {
+                    const isSelected = selectedEmployees.some(sel => sel.id === emp.id);
+                    return (
+                      <tr key={emp.id} className={cn("hover:bg-slate-50 transition-colors group", isSelected && "bg-indigo-50/30")}>
+                        <td className="px-4 py-3 text-center">
+                          <input 
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id));
+                              } else {
+                                setSelectedEmployees(prev => [...prev, emp]);
+                              }
+                            }}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center text-[10px] text-slate-300 font-mono italic">#{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-indigo-500 italic bg-indigo-50/20">{emp.employeeCode}</td>
+                        <td className="px-6 py-3 font-bold text-slate-800 uppercase text-xs tracking-tighter">{emp.name}</td>
+                        <td className="px-6 py-3 text-xs text-slate-500 italic">{emp.department}</td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            (employeeStats[emp.id]?.week || 0) >= LIMITS.week ? "bg-red-100 text-red-600" : 
+                            (employeeStats[emp.id]?.week || 0) >= LIMITS.week * 0.8 ? "bg-orange-100 text-orange-600" : 
+                            "bg-slate-100 text-slate-700"
+                          )}>
+                            {employeeStats[emp.id]?.week || 0}h
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            (employeeStats[emp.id]?.month || 0) >= LIMITS.month ? "bg-red-100 text-red-600" : 
+                            (employeeStats[emp.id]?.month || 0) >= LIMITS.month * 0.8 ? "bg-orange-100 text-orange-600" : 
+                            "bg-slate-100 text-slate-700"
+                          )}>
+                            {employeeStats[emp.id]?.month || 0}h
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                            (employeeStats[emp.id]?.year || 0) >= LIMITS.year ? "bg-red-100 text-red-600" : 
+                            (employeeStats[emp.id]?.year || 0) >= LIMITS.year * 0.8 ? "bg-orange-100 text-orange-600" : 
+                            "bg-slate-100 text-slate-700"
+                          )}>
+                            {employeeStats[emp.id]?.year || 0}h
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {deletingId === emp.id ? (
+                              <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                                <button 
+                                  onClick={() => handleDeleteEmployee(emp.id)}
+                                  className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700"
+                                >
+                                  Xóa
+                                </button>
+                                <button 
+                                  onClick={() => setDeletingId(null)}
+                                  className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded"
+                                >
+                                  Hủy
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id));
+                                    } else {
+                                      setSelectedEmployees(prev => [...prev, emp]);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-bold py-1 px-3 rounded-lg transition-all uppercase tracking-widest border",
+                                    isSelected 
+                                      ? "bg-indigo-600 text-white border-indigo-600" 
+                                      : "text-indigo-600 border-indigo-100 hover:bg-indigo-50"
+                                  )}
+                                >
+                                  {isSelected ? 'Đã chọn' : 'Chọn'}
+                                </button>
+                                <button 
+                                  onClick={() => setDeletingId(emp.id)}
+                                  className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
-
-        {/* Stats Column */}
-        <div className="bg-slate-900 rounded-xl p-6 text-white shadow-xl shadow-slate-900/20 space-y-6 flex flex-col order-first lg:order-last">
-          <div>
-            <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Thống kê hiện tại</h2>
-            
-            {selectedEmployees.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 lg:py-20 text-center space-y-3 opacity-30">
-                <User className="w-10 h-10" />
-                <p className="text-[10px] font-bold uppercase tracking-tighter">Vui lòng chọn nhân viên</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="mb-4">
-                  <div className="text-xl font-black text-indigo-400 truncate uppercase">{stats?.name}</div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats?.code}</div>
-                  {selectedEmployees.length > 1 && (
-                    <div className="mt-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider italic">
-                      + {selectedEmployees.length - 1} nhân viên khác
-                    </div>
-                  )}
-                </div>
-                <StatCard 
-                  label="Tuần này" 
-                  value={stats?.weekHours || 0} 
-                  limit={LIMITS.week} 
-                  unit="h"
-                />
-                <StatCard 
-                  label="Tháng này" 
-                  value={stats?.monthHours || 0} 
-                  limit={LIMITS.month} 
-                  unit="h"
-                />
-                <StatCard 
-                  label="Năm nay" 
-                  value={stats?.yearHours || 0} 
-                  limit={LIMITS.year} 
-                  unit="h"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="pt-6 border-t border-slate-800 mt-auto">
-            <div className="flex items-center gap-2 text-amber-500 mb-2">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase font-bold tracking-widest">Quy định tối đa</span>
-            </div>
-            <p className="text-[10px] leading-relaxed text-slate-400 font-medium italic">
-              Giới hạn tối đa cho phép: <br />
-              <span className="text-white font-bold not-italic">12h/tuần • 40h/tháng • 300h/năm</span>
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, limit, unit }: { label: string; value: number; limit: number; unit: string }) {
-  const percentage = Math.min((value / limit) * 100, 100);
-  const isNearLimit = value >= limit * 0.8;
-  const isExceeded = value > limit;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-end">
-        <span className="text-xs font-medium text-indigo-200">{label}</span>
-        <div className="font-bold text-xl">
-          <span className={cn(
-            isExceeded ? "text-red-400" : isNearLimit ? "text-orange-400" : "text-white"
-          )}>
-            {value}
-          </span>
-          <span className="text-xs text-indigo-400 ml-1 font-medium italic">/ {limit}{unit}</span>
-        </div>
-      </div>
-      <div className="h-1.5 bg-indigo-950 w-full rounded-full overflow-hidden">
-        <div 
-          className={cn(
-            "h-full transition-all duration-1000 ease-out",
-            isExceeded ? "bg-red-500" : isNearLimit ? "bg-orange-500" : "bg-indigo-400"
-          )}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+function StatCard() { return null; }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, Plus, User, Clock, AlertTriangle, Upload, UserPlus, Trash2 } from 'lucide-react';
+import { Search, Plus, User, Clock, AlertTriangle, Upload, UserPlus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Employee, OTRecord, LIMITS } from '../types';
 import { cn } from '../lib/utils';
 import { format, startOfWeek, parseISO } from 'date-fns';
@@ -15,7 +15,7 @@ interface RegistrationProps {
 
 export default function Registration({ onAddRecord, records, employees, setEmployees }: RegistrationProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
   const [startTime, setStartTime] = useState<string>('17:00');
   const [endTime, setEndTime] = useState<string>('19:00');
   const [hours, setHours] = useState<string>('2');
@@ -87,13 +87,19 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
   }, [employees, records]);
 
   const stats = useMemo(() => {
-    if (!selectedEmployee) return null;
+    if (selectedEmployees.length === 0) return null;
+    // Show stats for the last selected employee or first if needed, 
+    // but for multi-select we might just hide or show a summary.
+    // Let's show stats for the "last" one focused/added for now as a preview.
+    const employee = selectedEmployees[selectedEmployees.length - 1];
     return {
-      weekHours: employeeStats[selectedEmployee.id]?.week || 0,
-      monthHours: employeeStats[selectedEmployee.id]?.month || 0,
-      yearHours: employeeStats[selectedEmployee.id]?.year || 0
+      name: employee.name,
+      code: employee.employeeCode,
+      weekHours: employeeStats[employee.id]?.week || 0,
+      monthHours: employeeStats[employee.id]?.month || 0,
+      yearHours: employeeStats[employee.id]?.year || 0
     };
-  }, [selectedEmployee, employeeStats]);
+  }, [selectedEmployees, employeeStats]);
 
   const calculateHours = (start: string, end: string) => {
     try {
@@ -121,29 +127,42 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEmployee || !hours || !date || !startTime || !endTime) return;
+    if (selectedEmployees.length === 0 || !hours || !date || !startTime || !endTime) return;
 
-    // Check if duplicate on same day
-    const isDuplicate = records.some(r => r.employeeId === selectedEmployee.id && r.date === date);
-    if (isDuplicate) {
-      alert(`Nhân viên ${selectedEmployee.name} đã được đăng ký tăng ca ngày ${format(parseISO(date), 'dd/MM/yyyy')}. Mỗi nhân viên chỉ được đăng ký tối đa 1 lần/ngày.`);
-      return;
-    }
+    const addedNames: string[] = [];
+    const duplicateNames: string[] = [];
 
-    onAddRecord({
-      employeeId: selectedEmployee.id,
-      employeeName: selectedEmployee.name,
-      employeeCode: selectedEmployee.employeeCode,
-      department: selectedEmployee.department,
-      jobTitle: selectedEmployee.jobTitle,
-      date,
-      startTime,
-      endTime,
-      hours: parseFloat(hours),
-      reason
+    selectedEmployees.forEach(employee => {
+      // Check if duplicate on same day
+      const isDuplicate = records.some(r => r.employeeId === employee.id && r.date === date);
+      if (isDuplicate) {
+        duplicateNames.push(employee.name);
+        return;
+      }
+
+      onAddRecord({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        employeeCode: employee.employeeCode,
+        department: employee.department,
+        jobTitle: employee.jobTitle,
+        date,
+        startTime,
+        endTime,
+        hours: parseFloat(hours),
+        reason
+      });
+      addedNames.push(employee.name);
     });
 
-    setReason('');
+    if (duplicateNames.length > 0) {
+      alert(`Các nhân viên sau đã có đăng ký ngày ${format(parseISO(date), 'dd/MM/yyyy')}: ${duplicateNames.join(', ')}`);
+    }
+
+    if (addedNames.length > 0) {
+      setReason('');
+      setSelectedEmployees([]);
+    }
   };
 
   const handleAddEmployee = (e: React.FormEvent) => {
@@ -165,7 +184,7 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
 
   const handleDeleteEmployee = (id: string) => {
     setEmployees(prev => prev.filter(e => e.id !== id));
-    if (selectedEmployee?.id === id) setSelectedEmployee(null);
+    setSelectedEmployees(prev => prev.filter(e => e.id !== id));
     setDeletingId(null);
   };
 
@@ -256,48 +275,63 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
               />
             </div>
 
-            {searchTerm && filteredEmployees.length > 0 && !selectedEmployee && (
+            {searchTerm && filteredEmployees.length > 0 && (
               <div className="mt-2 border border-slate-200 bg-white rounded-lg overflow-hidden shadow-lg divide-y divide-slate-100 z-10 relative">
-                {filteredEmployees.map(emp => (
-                  <button
-                    key={emp.id}
-                    onClick={() => {
-                      setSelectedEmployee(emp);
-                      setSearchTerm('');
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between group"
-                  >
-                    <div className="min-w-0 pr-4">
-                      <div className="font-bold text-slate-800 text-sm truncate uppercase">{emp.name}</div>
-                      <div className="text-[10px] text-slate-500 truncate">{emp.employeeCode} • {emp.department}</div>
-                    </div>
-                    <Plus className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                  </button>
-                ))}
+                {filteredEmployees.map(emp => {
+                  const isSelected = selectedEmployees.some(selected => selected.id === emp.id);
+                  return (
+                    <button
+                      key={emp.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id));
+                        } else {
+                          setSelectedEmployees(prev => [...prev, emp]);
+                        }
+                        setSearchTerm('');
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between group"
+                    >
+                      <div className="min-w-0 pr-4">
+                        <div className="font-bold text-slate-800 text-sm truncate uppercase">{emp.name}</div>
+                        <div className="text-[10px] text-slate-500 truncate">{emp.employeeCode} • {emp.department}</div>
+                      </div>
+                      {isSelected ? (
+                        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Plus className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {selectedEmployee && (
+          {selectedEmployees.length > 0 && (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-6 space-y-4 lg:space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex justify-between items-center">
-                <h2 className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider">Thông tin đăng ký</h2>
+                <h2 className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider">Thông tin đăng ký ({selectedEmployees.length} NV)</h2>
                 <button 
-                  onClick={() => setSelectedEmployee(null)}
+                  onClick={() => setSelectedEmployees([])}
                   className="text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors px-2 py-1 hover:bg-red-50 rounded uppercase tracking-widest"
                 >
-                  Hủy
+                  Hủy tất cả
                 </button>
               </div>
               
-              <div className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <div className="w-10 lg:w-12 h-10 lg:h-12 bg-white rounded-lg shadow-sm border border-slate-100 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 lg:w-6 h-5 lg:h-6 text-indigo-600" />
-                </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-slate-800 text-base lg:text-lg truncate uppercase">{selectedEmployee.name}</div>
-                  <div className="text-[9px] lg:text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{selectedEmployee.employeeCode} • {selectedEmployee.department}</div>
-                </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedEmployees.map(emp => (
+                  <div key={emp.id} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 group">
+                    <span className="text-[10px] font-bold uppercase truncate max-w-[120px]">{emp.name}</span>
+                    <button 
+                      onClick={() => setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id))}
+                      className="p-0.5 hover:bg-indigo-200 rounded-full transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 lg:gap-4">
@@ -517,15 +551,22 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
                           ) : (
                             <>
                               <button 
-                                onClick={() => setSelectedEmployee(emp)}
+                                onClick={() => {
+                                  const isSelected = selectedEmployees.some(selected => selected.id === emp.id);
+                                  if (isSelected) {
+                                    setSelectedEmployees(prev => prev.filter(e => e.id !== emp.id));
+                                  } else {
+                                    setSelectedEmployees(prev => [...prev, emp]);
+                                  }
+                                }}
                                 className={cn(
                                   "text-[10px] font-bold py-1 px-3 rounded-lg transition-all uppercase tracking-widest border",
-                                  selectedEmployee?.id === emp.id 
+                                  selectedEmployees.some(sel => sel.id === emp.id) 
                                     ? "bg-indigo-600 text-white border-indigo-600" 
                                     : "text-indigo-600 border-indigo-100 hover:bg-indigo-50"
                                 )}
                               >
-                                Chọn
+                                {selectedEmployees.some(sel => sel.id === emp.id) ? 'Đã chọn' : 'Chọn'}
                               </button>
                               <button 
                                 onClick={() => setDeletingId(emp.id)}
@@ -550,7 +591,7 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
           <div>
             <h2 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Thống kê hiện tại</h2>
             
-            {!selectedEmployee ? (
+            {selectedEmployees.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 lg:py-20 text-center space-y-3 opacity-30">
                 <User className="w-10 h-10" />
                 <p className="text-[10px] font-bold uppercase tracking-tighter">Vui lòng chọn nhân viên</p>
@@ -558,8 +599,13 @@ export default function Registration({ onAddRecord, records, employees, setEmplo
             ) : (
               <div className="space-y-6">
                 <div className="mb-4">
-                  <div className="text-xl font-black text-indigo-400 truncate uppercase">{selectedEmployee.name}</div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{selectedEmployee.employeeCode}</div>
+                  <div className="text-xl font-black text-indigo-400 truncate uppercase">{stats?.name}</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats?.code}</div>
+                  {selectedEmployees.length > 1 && (
+                    <div className="mt-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider italic">
+                      + {selectedEmployees.length - 1} nhân viên khác
+                    </div>
+                  )}
                 </div>
                 <StatCard 
                   label="Tuần này" 

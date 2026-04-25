@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { AlertCircle, User, Activity } from 'lucide-react';
 import { OTRecord, Employee, LIMITS } from '../types';
 import { cn } from '../lib/utils';
-import { startOfWeek, startOfMonth, startOfYear, isWithinInterval, parseISO } from 'date-fns';
+import { startOfWeek, startOfYear, isWithinInterval, parseISO } from 'date-fns';
+import { getCycleIntervalForDate } from '../lib/dateUtils';
 
 interface AlertListProps {
   records: OTRecord[];
@@ -27,7 +28,7 @@ export default function AlertList({ records, employees }: AlertListProps) {
     const list: AlertEntry[] = [];
     const now = new Date();
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const monthStart = startOfMonth(now);
+    const cycleInterval = getCycleIntervalForDate(now);
     const yearStart = startOfYear(now);
 
     // Get all unique employee IDs from both active list and historical records
@@ -58,7 +59,7 @@ export default function AlertList({ records, employees }: AlertListProps) {
         .reduce((sum, r) => sum + r.hours, 0);
 
       const monthHours = empRecords
-        .filter(r => isWithinInterval(parseISO(r.date), { start: monthStart, end: now }))
+        .filter(r => isWithinInterval(parseISO(r.date), cycleInterval))
         .reduce((sum, r) => sum + r.hours, 0);
 
       const yearHours = empRecords

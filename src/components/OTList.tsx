@@ -3,7 +3,8 @@ import { Download, Filter, Calendar, List, Edit2, Trash2, Save, X } from 'lucide
 import { OTRecord, Employee } from '../types';
 import { MOCK_EMPLOYEES } from '../constants';
 import { cn } from '../lib/utils';
-import { format, parseISO, isSameDay, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
+import { format, parseISO, isSameDay, isSameWeek, isSameYear } from 'date-fns';
+import { isSameCycleMonth, getCycleIntervalForDate } from '../lib/dateUtils';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
@@ -30,7 +31,7 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
       switch (period) {
         case 'day': return isSameDay(recordDate, target);
         case 'week': return isSameWeek(recordDate, target, { weekStartsOn: 1 });
-        case 'month': return isSameMonth(recordDate, target);
+        case 'month': return isSameCycleMonth(recordDate, target);
         case 'year': return isSameYear(recordDate, target);
         default: return true;
       }
@@ -398,12 +399,19 @@ export default function OTList({ records, employees, onUpdateRecord, onDeleteRec
 
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mốc thời gian</label>
-          <input
-            type="date"
-            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-sans"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-          />
+          <div className="space-y-1">
+            <input
+              type="date"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-sans"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+            />
+            {period === 'month' && (
+              <p className="text-[10px] text-indigo-500 font-bold italic">
+                Chu kỳ: {format(getCycleIntervalForDate(parseISO(targetDate)).start, 'dd/MM')} - {format(getCycleIntervalForDate(parseISO(targetDate)).end, 'dd/MM')}
+              </p>
+            )}
+          </div>
         </div>
 
         <button
